@@ -5,9 +5,16 @@ import json
 from datetime import datetime
 import os
 import re
+from dotenv import load_dotenv
+
+# 환경 변수 로드
+load_dotenv()
 
 # OpenAI API 설정
-openai.api_key = "***REMOVED***"  # 실제 API 키로 교체
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise ValueError("OPENAI_API_KEY 환경 변수가 설정되지 않았습니다.")
+openai.api_key = api_key
 
 def analyze_and_regenerate_feedback():
     """
