@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRISS - AI 기반 평가 분석 시스템</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.2em;
+        }
+        .upload-area {
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #3498db;
+        }
+        .upload-text {
+            font-size: 1.2em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .upload-hint {
+            color: #7f8c8d;
+        }
+        #fileInput {
+            display: none;
+        }
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            display: none;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            background: #ecf0f1;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-fill {
+            background: #2ecc71;
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        .status-text {
+            text-align: center;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        .result-container {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            background: #e8f5e8;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .test-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .test-btn {
+            background: #e74c3c;
+            margin: 10px 0;
+        }
+        .test-btn:hover {
+            background: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AIRISS</h1>
+            <p>AI 기반 직원 평가 의견 분석 시스템</p>
+        </div>
+
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <div style="font-size: 3em; margin-bottom: 10px;">📊</div>
+            <div class="upload-text">Excel 또는 CSV 파일을 선택하세요</div>
+            <div class="upload-hint">지원 형식: .xlsx, .xls, .csv (최대 10MB)</div>
+        </div>
+
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+        
+        <div id="fileInfo" class="file-info">
+            <div id="fileName" style="font-weight: bold; margin-bottom: 5px;"></div>
+            <div id="fileDetails" style="color: #7f8c8d;"></div>
+        </div>
+
+        <button id="uploadBtn" class="btn" disabled>파일을 선택해주세요</button>
+
+        <div id="progressContainer" class="progress-container">
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="statusText" class="status-text">분석 준비 중...</div>
+        </div>
+
+        <div id="resultContainer" class="result-container">
+            <div style="color: #27ae60; font-size: 1.2em; margin-bottom: 15px;">✅ 분석 완료!</div>
+            <button id="downloadBtn" class="btn" style="background: #27ae60;">결과 파일 다운로드</button>
+        </div>
+
+        <div class="test-section">
+            <p style="margin-bottom: 15px; color: #7f8c8d;">OpenAI API 연결 테스트</p>
+            <button id="testBtn" class="btn test-btn">API 연결 테스트</button>
+            <div id="testResult" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        let currentTaskId = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileDetails = document.getElementById('fileDetails');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const statusText = document.getElementById('statusText');
+        const resultContainer = document.getElementById('resultContainer');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const testBtn = document.getElementById('testBtn');
+        const testResult = document.getElementById('testResult');
+
+        fileInput.addEventListener('change', function(e) {
+            handleFile(e.target.files[0]);
+        });
+
+        uploadBtn.addEventListener('click', uploadFile);
+        downloadBtn.addEventListener('click', downloadResult);
+        testBtn.addEventListener('click', testConnection);
+
+        function handleFile(file) {
+            if (!file) return;
+
+            const allowedTypes = ['.xlsx', '.xls', '.csv'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!allowedTypes.includes(fileExt)) {
+                alert('Excel 또는 CSV 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) {
+                alert('파일 크기가 10MB를 초과합니다.');
+                return;
+            }
+
+            selectedFile = file;
+            
+            fileName.textContent = file.name;
+            fileDetails.textContent = `크기: ${(file.size / 1024 / 1024).toFixed(2)}MB | 형식: ${fileExt}`;
+            fileInfo.style.display = 'block';
+
+            uploadBtn.textContent = '분석 시작';
+            uploadBtn.disabled = false;
+        }
+
+        async function uploadFile() {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '업로드 중...';
+            progressContainer.style.display = 'block';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    currentTaskId = result.task_id;
+                    statusText.textContent = '분석 시작...';
+                    checkProgress();
+                } else {
+                    throw new Error(result.detail || '업로드 실패');
+                }
+            } catch (error) {
+                alert('오류: ' + error.message);
+                resetUI();
+            }
+        }
+
+        async function checkProgress() {
+            if (!currentTaskId) return;
+
+            try {
+                const response = await fetch(`/status/${currentTaskId}`);
+                const status = await response.json();
+
+                if (status.status === 'processing') {
+                    const progress = status.progress || 0;
+                    progressFill.style.width = progress + '%';
+                    statusText.textContent = `분석 중... ${status.completed_rows}/${status.total_rows} (${progress}%)`;
+                    
+                    setTimeout(checkProgress, 2000);
+                } else if (status.status === 'completed') {
+                    progressFill.style.width = '100%';
+                    statusText.textContent = '분석 완료!';
+                    
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        resultContainer.style.display = 'block';
+                    }, 1000);
+                } else if (status.status === 'error') {
+                    throw new Error(status.error || '분석 중 오류 발생');
+                }
+            } catch (error) {
+                alert('오류: ' + error.message);
+                resetUI();
+            }
+        }
+
+        function downloadResult() {
+            if (currentTaskId) {
+                window.location.href = `/download/${currentTaskId}`;
+            }
+        }
+
+        async function testConnection() {
+            testBtn.disabled = true;
+            testBtn.textContent = '테스트 중...';
+            testResult.textContent = '';
+
+            try {
+                const response = await fetch('/test');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    testResult.innerHTML = '<span style="color: #27ae60;">✅ OpenAI API 연결 성공!</span>';
+                } else {
+                    testResult.innerHTML = '<span style="color: #e74c3c;">❌ 연결 실패: ' + result.message + '</span>';
+                }
+            } catch (error) {
+                testResult.innerHTML = '<span style="color: #e74c3c;">❌ 테스트 실패: ' + error.message + '</span>';
+            }
+
+            testBtn.disabled = false;
+            testBtn.textContent = 'API 연결 테스트';
+        }
+
+        function resetUI() {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = '다시 시도';
+            progressContainer.style.display = 'none';
+            resultContainer.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
