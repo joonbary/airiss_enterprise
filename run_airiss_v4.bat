@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo  AIRISS v4.0 Enhanced 서버 시작
+echo  AIRISS v4.1 Enhanced 서버 시작
 echo ========================================
 echo.
 
@@ -16,7 +16,7 @@ pip install -r requirements.txt >nul 2>&1
 
 :: 서버 시작
 echo.
-echo AIRISS v4.0 Enhanced 서버를 시작합니다...
+echo AIRISS v4.1 Enhanced 서버를 시작합니다...
 echo.
 echo 접속 주소:
 echo - 메인 UI: http://localhost:8002/
@@ -27,7 +27,7 @@ echo 종료하려면 Ctrl+C를 누르세요.
 echo ========================================
 echo.
 
-:: main_enhanced.py 실행
-python -m app.main_enhanced
+:: Python 모듈로 실행 (올바른 경로 설정)
+python -m app.main
 
 pause

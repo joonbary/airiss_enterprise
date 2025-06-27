@@ -410,7 +410,10 @@
         }
         
         function connectWebSocket() {
-            const wsUrl = `ws://{{ ws_host }}:{{ server_port }}/ws/${clientId}?channels=analysis,alerts,dashboard`;
+            // 현재 페이지의 호스트와 포트를 동적으로 가져오기
+            const wsHost = window.location.hostname || 'localhost';
+            const wsPort = window.location.port || '8002';
+            const wsUrl = `ws://${wsHost}:${wsPort}/ws/${clientId}?channels=analysis,alerts,dashboard`;
             
             addLog(`WebSocket 연결 시도: ${wsUrl}`);
             ws = new WebSocket(wsUrl);
