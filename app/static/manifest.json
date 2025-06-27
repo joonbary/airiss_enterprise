@@ -1,0 +1,114 @@
+{
+  "name": "AIRISS v4.0 - OK금융그룹 AI 인재 분석",
+  "short_name": "AIRISS",
+  "description": "AI 기반 직원 성과/역량 스코어링 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FF5722",
+  "theme_color": "#FF5722",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/static/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "AIRISS 데스크톱 화면"
+    },
+    {
+      "src": "/static/screenshots/mobile.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "AIRISS 모바일 화면"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "ko",
+  "dir": "ltr",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "경영진 대시보드",
+      "short_name": "Executive",
+      "description": "경영진 전용 대시보드 바로 가기",
+      "url": "/executive",
+      "icons": [
+        {
+          "src": "/static/icons/executive-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "파일 업로드",
+      "short_name": "Upload",
+      "description": "분석용 파일 업로드",
+      "url": "/?action=upload",
+      "icons": [
+        {
+          "src": "/static/icons/upload-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "protocol_handlers": [
+    {
+      "protocol": "web+airiss",
+      "url": "/?handler=%s"
+    }
+  ]
+}

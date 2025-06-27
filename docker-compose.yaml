@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: airiss_postgres
+    environment:
+      - POSTGRES_USER=airiss_user
+      - POSTGRES_PASSWORD=airiss_secure_password_2024
+      - POSTGRES_DB=airiss_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: airiss_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass airiss_redis_password_2024
+
+volumes:
+  postgres_data:

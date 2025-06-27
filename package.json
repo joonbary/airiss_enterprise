@@ -1,0 +1,53 @@
+{
+  "name": "airiss-v4-frontend",
+  "version": "4.0.1",
+  "description": "AIRISS v4.0 Enhanced Frontend - OK금융그룹 AI 기반 인재 분석 시스템",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1",
+    "axios": "^1.10.0",
+    "chart.js": "^4.2.1",
+    "react-chartjs-2": "^5.2.0",
+    "antd": "^5.4.0",
+    "@ant-design/icons": "^5.0.1",
+    "styled-components": "^5.3.9",
+    "framer-motion": "^10.12.4",
+    "react-query": "^3.39.3",
+    "lodash": "^4.17.21",
+    "dayjs": "^1.11.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.11",
+    "@types/lodash": "^4.14.194",
+    "@vitejs/plugin-react": "^4.0.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.2",
+    "eslint": "^8.38.0",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.3.4"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

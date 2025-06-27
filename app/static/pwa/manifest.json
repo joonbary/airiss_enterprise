@@ -1,0 +1,58 @@
+{
+  "name": "AIRISS v4.0 - OK금융그룹 AI 인재분석",
+  "short_name": "AIRISS v4.0",
+  "description": "OK금융그룹 AI 기반 직원 성과/역량 스코어링 시스템",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FF5722",
+  "theme_color": "#FF5722",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "hr"],
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/static/pwa/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/pwa/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/pwa/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/static/pwa/screenshot-narrow.png",
+      "sizes": "360x640",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "파일 업로드",
+      "short_name": "Upload",
+      "description": "Excel/CSV 파일 업로드 및 분석",
+      "url": "/?action=upload",
+      "icons": [{ "src": "/static/pwa/icon-upload.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "분석 결과",
+      "short_name": "Results",
+      "description": "최근 분석 결과 확인",
+      "url": "/?action=results",
+      "icons": [{ "src": "/static/pwa/icon-chart.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}

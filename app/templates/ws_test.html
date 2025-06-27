@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIRISS v4.0 WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        #messages {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background-color: #e9ecef;
+        }
+        .message.sent {
+            background-color: #cfe2ff;
+            border-left: 4px solid #0066cc;
+        }
+        .message.received {
+            background-color: #d1ecf1;
+            border-left: 4px solid #0c5460;
+        }
+        .message.system {
+            background-color: #fff3cd;
+            border-left: 4px solid #856404;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .endpoint-info {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AIRISS v4.0 WebSocket Test</h1>
+        
+        <div class="endpoint-info">
+            <strong>WebSocket Endpoints:</strong><br>
+            Main: ws://{{ ws_host }}:{{ server_port }}/ws/[client_id]<br>
+            Test: ws://{{ ws_host }}:{{ server_port }}/test-ws
+        </div>
+        
+        <div id="status" class="status disconnected">
+            ❌ Disconnected
+        </div>
+        
+        <div class="controls">
+            <button id="connectMainBtn" onclick="connectMain()">Connect Main WS</button>
+            <button id="connectTestBtn" onclick="connectTest()">Connect Test WS</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+            <button onclick="clearMessages()">Clear Messages</button>
+        </div>
+        
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type a message..." disabled>
+            <button id="sendBtn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let clientId = 'client-' + Math.random().toString(36).substr(2, 9);
+        
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const connectMainBtn = document.getElementById('connectMainBtn');
+            const connectTestBtn = document.getElementById('connectTestBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✅ Connected';
+                connectMainBtn.disabled = true;
+                connectTestBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ Disconnected';
+                connectMainBtn.disabled = false;
+                connectTestBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                messageInput.disabled = true;
+                sendBtn.disabled = true;
+            }
+        }
+        
+        function addMessage(content, type = 'system') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type;
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `<strong>[${time}]</strong> ${content}`;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function connectMain() {
+            const wsUrl = `ws://{{ ws_host }}:{{ server_port }}/ws/${clientId}`;
+            addMessage(`Connecting to ${wsUrl}...`, 'system');
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                addMessage('Connected to Main WebSocket!', 'system');
+                updateStatus(true);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    addMessage(`Received: ${JSON.stringify(data, null, 2)}`, 'received');
+                } catch {
+                    addMessage(`Received: ${event.data}`, 'received');
+                }
+            };
+            
+            ws.onerror = (error) => {
+                addMessage(`Error: ${error}`, 'system');
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                addMessage('Connection closed', 'system');
+                updateStatus(false);
+            };
+        }
+        
+        function connectTest() {
+            const wsUrl = `ws://{{ ws_host }}:{{ server_port }}/test-ws`;
+            addMessage(`Connecting to ${wsUrl}...`, 'system');
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                addMessage('Connected to Test WebSocket!', 'system');
+                updateStatus(true);
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    addMessage(`Received: ${JSON.stringify(data, null, 2)}`, 'received');
+                } catch {
+                    addMessage(`Received: ${event.data}`, 'received');
+                }
+            };
+            
+            ws.onerror = (error) => {
+                addMessage(`Error: ${error}`, 'system');
+            };
+            
+            ws.onclose = () => {
+                addMessage('Connection closed', 'system');
+                updateStatus(false);
+            };
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                addMessage('Disconnecting...', 'system');
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(message);
+                addMessage(`Sent: ${message}`, 'sent');
+                input.value = '';
+            }
+        }
+        
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+            addMessage('Messages cleared', 'system');
+        }
+        
+        // Enter 키로 메시지 전송
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // 페이지 로드 시
+        window.onload = () => {
+            addMessage('AIRISS v4.0 WebSocket Test Page Ready', 'system');
+            addMessage(`Your Client ID: ${clientId}`, 'system');
+        };
+    </script>
+</body>
+</html> 

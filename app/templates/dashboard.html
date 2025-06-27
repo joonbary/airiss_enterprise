@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRISS v4.0 실시간 대시보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .progress-container {
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 30px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .alert-container {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .alert.info {
+            background: #cfe2ff;
+            border-color: #084298;
+            color: #084298;
+        }
+        
+        .alert.success {
+            background: #d1e7dd;
+            border-color: #0f5132;
+            color: #0f5132;
+        }
+        
+        .alert.warning {
+            background: #fff3cd;
+            border-color: #664d03;
+            color: #664d03;
+        }
+        
+        .alert.error {
+            background: #f8d7da;
+            border-color: #842029;
+            color: #842029;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-box:hover {
+            background: #e9ecef;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .log-container {
+            background: #343a40;
+            color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            opacity: 0;
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        .log-timestamp {
+            color: #ffc107;
+            margin-right: 10px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+        
+        .icon {
+            font-size: 1.2rem;
+        }
+        
+        .current-analysis {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea20, #764ba220);
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #667eea40;
+        }
+        
+        .employee-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        .employee-id {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .employee-score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AIRISS v4.0 실시간 대시보드</h1>
+            <div class="subtitle">AI 기반 인재 분석 시스템 - 실시간 모니터링</div>
+        </div>
+        
+        <div class="grid">
+            <!-- 연결 상태 카드 -->
+            <div class="card">
+                <h2><span class="icon">🔌</span> 연결 상태</h2>
+                <div id="connectionStatus" class="status disconnected">
+                    연결 대기 중...
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number" id="activeConnections">0</div>
+                        <div class="stat-label">활성 연결</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalMessages">0</div>
+                        <div class="stat-label">총 메시지</div>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="connectBtn" onclick="connectWebSocket()">연결</button>
+                    <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled>연결 해제</button>
+                </div>
+            </div>
+            
+            <!-- 분석 진행률 카드 -->
+            <div class="card">
+                <h2><span class="icon">📊</span> 분석 진행률</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill">0%</div>
+                    </div>
+                </div>
+                <div class="current-analysis">
+                    <h3>현재 분석 중인 직원</h3>
+                    <div class="employee-info">
+                        <span class="employee-id" id="currentEmployee">대기 중...</span>
+                        <span class="employee-score" id="currentScore">-</span>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number" id="processedCount">0</div>
+                        <div class="stat-label">처리 완료</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="stat-label">전체 대상</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 실시간 알림 카드 -->
+        <div class="card">
+            <h2><span class="icon">🔔</span> 실시간 알림</h2>
+            <div id="alertContainer" class="alert-container">
+                <div class="alert info">시스템 시작됨 - 연결을 시작하세요</div>
+            </div>
+        </div>
+        
+        <!-- 시스템 로그 카드 -->
+        <div class="card">
+            <h2><span class="icon">📜</span> 시스템 로그</h2>
+            <div id="logContainer" class="log-container">
+                <div class="log-entry">
+                    <span class="log-timestamp">[00:00:00]</span> 시스템 초기화 완료
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let clientId = 'dashboard-' + Math.random().toString(36).substr(2, 9);
+        let messageCount = 0;
+        
+        function updateConnectionStatus(connected) {
+            const statusEl = document.getElementById('connectionStatus');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            
+            if (connected) {
+                statusEl.className = 'status connected';
+                statusEl.textContent = '✅ 연결됨';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+            } else {
+                statusEl.className = 'status disconnected';
+                statusEl.textContent = '❌ 연결 끊김';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+        
+        function addAlert(level, message) {
+            const container = document.getElementById('alertContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert ${level}`;
+            const time = new Date().toLocaleTimeString();
+            alert.innerHTML = `<strong>[${time}]</strong> ${message}`;
+            
+            container.insertBefore(alert, container.firstChild);
+            
+            // 최대 10개 알림만 유지
+            while (container.children.length > 10) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        function addLog(message) {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="log-timestamp">[${time}]</span> ${message}`;
+            
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+            
+            // 최대 100개 로그만 유지
+            while (container.children.length > 100) {
+                container.removeChild(container.firstChild);
+            }
+        }
+        
+        function connectWebSocket() {
+            const wsUrl = `ws://{{ ws_host }}:{{ server_port }}/ws/${clientId}?channels=analysis,alerts,dashboard`;
+            
+            addLog(`WebSocket 연결 시도: ${wsUrl}`);
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                updateConnectionStatus(true);
+                addLog('WebSocket 연결 성공');
+                addAlert('success', 'AIRISS v4.0 실시간 시스템에 연결되었습니다');
+            };
+            
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    addLog(`메시지 파싱 오류: ${e.message}`);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                addLog(`WebSocket 오류: ${error}`);
+                addAlert('error', 'WebSocket 연결 오류가 발생했습니다');
+            };
+            
+            ws.onclose = () => {
+                updateConnectionStatus(false);
+                addLog('WebSocket 연결 종료');
+                addAlert('warning', 'WebSocket 연결이 종료되었습니다');
+            };
+        }
+        
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                addLog('WebSocket 연결 종료 요청');
+            }
+        }
+        
+        function handleMessage(data) {
+            messageCount++;
+            document.getElementById('totalMessages').textContent = messageCount;
+            
+            switch (data.type) {
+                case 'connection_established':
+                    addLog(`연결 확인: ${data.message}`);
+                    break;
+                    
+                case 'user_connected':
+                    document.getElementById('activeConnections').textContent = data.total_connections;
+                    addLog(`새 사용자 연결: ${data.client_id}`);
+                    break;
+                    
+                case 'user_disconnected':
+                    document.getElementById('activeConnections').textContent = data.total_connections;
+                    addLog(`사용자 연결 해제: ${data.client_id}`);
+                    break;
+                    
+                case 'analysis_progress':
+                    updateAnalysisProgress(data);
+                    break;
+                    
+                case 'alert':
+                    addAlert(data.level, data.message);
+                    break;
+                    
+                case 'dashboard_update':
+                    handleDashboardUpdate(data);
+                    break;
+                    
+                default:
+                    addLog(`알 수 없는 메시지 타입: ${data.type}`);
+            }
+        }
+        
+        function updateAnalysisProgress(data) {
+            const percentage = data.percentage || 0;
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = percentage + '%';
+            progressFill.textContent = percentage.toFixed(1) + '%';
+            
+            document.getElementById('currentEmployee').textContent = data.current_uid || '대기 중...';
+            document.getElementById('currentScore').textContent = data.current_score ? data.current_score.toFixed(1) : '-';
+            
+            document.getElementById('processedCount').textContent = data.current || 0;
+            document.getElementById('totalCount').textContent = data.total || 0;
+            
+            addLog(`분석 진행: ${data.current_uid} (${percentage.toFixed(1)}%)`);
+        }
+        
+        function handleDashboardUpdate(data) {
+            switch (data.update_type) {
+                case 'score_change':
+                    addAlert('info', `점수 업데이트: ${data.data.uid} - ${data.data.score}점`);
+                    break;
+                case 'new_analysis':
+                    addAlert('success', `새로운 분석 시작: 작업 ID ${data.data.job_id}`);
+                    break;
+                case 'statistics_update':
+                    // 통계 업데이트 처리
+                    break;
+            }
+        }
+        
+        // 페이지 로드 시 자동 연결
+        window.onload = () => {
+            addLog('AIRISS v4.0 실시간 대시보드 초기화');
+            // 자동 연결은 선택사항
+            // connectWebSocket();
+        };
+        
+        // 페이지 종료 시 연결 해제
+        window.onbeforeunload = () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+        };
+    </script>
+</body>
+</html> 

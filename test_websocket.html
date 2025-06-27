@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AIRISS v4.0 WebSocket Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .message {
+            padding: 5px;
+            margin: 5px 0;
+            background-color: #f0f0f0;
+            border-radius: 3px;
+        }
+        #log {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>AIRISS v4.0 WebSocket 실시간 연결 테스트</h1>
+    
+    <div id="status" class="status disconnected">연결 안됨</div>
+    
+    <div>
+        <button onclick="connectWebSocket()">연결</button>
+        <button onclick="disconnectWebSocket()">연결 해제</button>
+        <button onclick="testConnection()">테스트 메시지 전송</button>
+        <button onclick="clearLog()">로그 지우기</button>
+    </div>
+    
+    <div>
+        <h3>서버 정보</h3>
+        <p>WebSocket URL: <code id="wsUrl">계산 중...</code></p>
+        <p>연결 상태: <span id="readyState">CLOSED</span></p>
+    </div>
+    
+    <h3>통신 로그</h3>
+    <div id="log"></div>
+
+    <script>
+        let socket = null;
+        const clientId = 'test-client-' + Date.now();
+        const wsUrl = `ws://localhost:8001/ws/${clientId}`;
+        
+        // URL 표시
+        document.getElementById('wsUrl').textContent = wsUrl;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+            msgDiv.innerHTML = `<strong>[${time}]</strong> ${message}`;
+            logDiv.appendChild(msgDiv);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[${type}] ${message}`);
+        }
+        
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('status');
+            const readyStateSpan = document.getElementById('readyState');
+            
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '✅ 연결됨';
+                readyStateSpan.textContent = 'OPEN';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '❌ 연결 안됨';
+                readyStateSpan.textContent = socket ? getReadyStateText(socket.readyState) : 'CLOSED';
+            }
+        }
+        
+        function getReadyStateText(state) {
+            switch(state) {
+                case 0: return 'CONNECTING';
+                case 1: return 'OPEN';
+                case 2: return 'CLOSING';
+                case 3: return 'CLOSED';
+                default: return 'UNKNOWN';
+            }
+        }
+        
+        function connectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                log('이미 연결되어 있습니다.', 'warn');
+                return;
+            }
+            
+            log(`WebSocket 연결 시도: ${wsUrl}`, 'info');
+            
+            try {
+                socket = new WebSocket(wsUrl);
+                
+                socket.onopen = (event) => {
+                    log('✅ WebSocket 연결 성공!', 'success');
+                    updateStatus(true);
+                };
+                
+                socket.onmessage = (event) => {
+                    log(`📨 수신: ${event.data}`, 'info');
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`파싱된 데이터: ${JSON.stringify(data, null, 2)}`, 'debug');
+                    } catch (e) {
+                        // JSON이 아닌 텍스트 메시지
+                    }
+                };
+                
+                socket.onerror = (error) => {
+                    log(`❌ WebSocket 오류: ${error}`, 'error');
+                    console.error('WebSocket error:', error);
+                };
+                
+                socket.onclose = (event) => {
+                    log(`🔌 WebSocket 연결 종료 (코드: ${event.code}, 이유: ${event.reason})`, 'info');
+                    updateStatus(false);
+                };
+                
+            } catch (error) {
+                log(`❌ WebSocket 생성 실패: ${error.message}`, 'error');
+            }
+        }
+        
+        function disconnectWebSocket() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close();
+                log('연결 종료 요청', 'info');
+            } else {
+                log('연결이 이미 종료되었습니다.', 'warn');
+            }
+        }
+        
+        function testConnection() {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = `테스트 메시지 - ${new Date().toISOString()}`;
+                socket.send(message);
+                log(`📤 전송: ${message}`, 'info');
+            } else {
+                log('❌ WebSocket이 연결되지 않았습니다.', 'error');
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('로그 초기화됨', 'info');
+        }
+        
+        // 페이지 로드 시 자동 연결 시도
+        window.onload = () => {
+            log('AIRISS v4.0 WebSocket 테스트 페이지 로드 완료', 'info');
+            // connectWebSocket(); // 자동 연결 원하면 주석 해제
+        };
+    </script>
+</body>
+</html>

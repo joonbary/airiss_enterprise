@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRISS v4.0 실시간 모니터링 대시보드</title>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.1/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #FF5722;
+            --secondary-color: #F89C26;
+            --success-color: #4CAF50;
+            --warning-color: #FF9800;
+            --danger-color: #f44336;
+            --info-color: #2196F3;
+            --dark-color: #1a1a1a;
+            --light-bg: #f8f9fa;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--dark-color), #2c2c2c);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .logo .subtitle {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-top: 5px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--success-color);
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .stat-title {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-icon {
+            font-size: 1.5rem;
+            opacity: 0.7;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+        
+        .stat-change {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .stat-change.positive {
+            color: var(--success-color);
+        }
+        
+        .stat-change.negative {
+            color: var(--danger-color);
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--card-shadow);
+            overflow-x: auto;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table th,
+        .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .table th {
+            background: var(--light-bg);
+            font-weight: bold;
+            color: var(--dark-color);
+        }
+        
+        .table tr:hover {
+            background: rgba(255, 87, 34, 0.05);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .badge.success {
+            background: rgba(76, 175, 80, 0.1);
+            color: var(--success-color);
+        }
+        
+        .badge.warning {
+            background: rgba(255, 152, 0, 0.1);
+            color: var(--warning-color);
+        }
+        
+        .badge.error {
+            background: rgba(244, 67, 54, 0.1);
+            color: var(--danger-color);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transition: width 0.3s ease;
+        }
+        
+        .refresh-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .refresh-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .refresh-button.loading {
+            opacity: 0.7;
+        }
+        
+        .refresh-button.loading i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert.warning {
+            background: rgba(255, 152, 0, 0.1);
+            border-left: 4px solid var(--warning-color);
+            color: #e65100;
+        }
+        
+        .alert.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 4px solid var(--danger-color);
+            color: #c62828;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .container {
+                padding: 20px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <div>
+                    <h1>AIRISS v4.0 모니터링</h1>
+                    <div class="subtitle">실시간 시스템 대시보드</div>
+                </div>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>시스템 정상</span>
+                <button class="refresh-button" onclick="refreshData()" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                    새로고침
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 주요 지표 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">총 요청 수</div>
+                    <i class="fas fa-globe stat-icon" style="color: var(--primary-color);"></i>
+                </div>
+                <div class="stat-value" id="totalRequests">0</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="requestsChange">+12.5%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">오류율</div>
+                    <i class="fas fa-exclamation-triangle stat-icon" style="color: var(--warning-color);"></i>
+                </div>
+                <div class="stat-value" id="errorRate">0%</div>
+                <div class="stat-change" id="errorRateChange">
+                    <i class="fas fa-arrow-down"></i>
+                    <span>-2.1%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">평균 응답시간</div>
+                    <i class="fas fa-clock stat-icon" style="color: var(--info-color);"></i>
+                </div>
+                <div class="stat-value" id="avgResponseTime">0ms</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-down"></i>
+                    <span id="responseTimeChange">-15ms</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">활성 연결</div>
+                    <i class="fas fa-users stat-icon" style="color: var(--success-color);"></i>
+                </div>
+                <div class="stat-value" id="activeConnections">0</div>
+                <div class="stat-change positive">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="connectionsChange">+5</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">CPU 사용률</div>
+                    <i class="fas fa-microchip stat-icon" style="color: var(--secondary-color);"></i>
+                </div>
+                <div class="stat-value" id="cpuUsage">0%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpuProgress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-title">메모리 사용률</div>
+                    <i class="fas fa-memory stat-icon" style="color: var(--info-color);"></i>
+                </div>
+                <div class="stat-value" id="memoryUsage">0%</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memoryProgress" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 알림 영역 -->
+        <div id="alertsContainer"></div>
+
+        <!-- 차트 영역 -->
+        <div class="chart-grid">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-chart-area"></i>
+                    시간별 요청 수
+                </div>
+                <div class="chart-container">
+                    <canvas id="requestChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie"></i>
+                    응답 상태 분포
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 시스템 리소스 차트 -->
+        <div class="chart-card">
+            <div class="chart-title">
+                <i class="fas fa-server"></i>
+                시스템 리소스 모니터링
+            </div>
+            <div class="chart-container">
+                <canvas id="resourceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 최근 에러 로그 -->
+        <div class="table-container">
+            <div class="chart-title">
+                <i class="fas fa-bug"></i>
+                최근 에러 로그
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>시간</th>
+                        <th>타입</th>
+                        <th>메시지</th>
+                        <th>경로</th>
+                        <th>심각도</th>
+                    </tr>
+                </thead>
+                <tbody id="errorLogsTable">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #666;">
+                            에러 로그를 불러오는 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 인기 페이지 -->
+        <div class="table-container" style="margin-top: 20px;">
+            <div class="chart-title">
+                <i class="fas fa-fire"></i>
+                인기 페이지
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>경로</th>
+                        <th>조회수</th>
+                        <th>비율</th>
+                    </tr>
+                </thead>
+                <tbody id="popularPagesTable">
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #666;">
+                            데이터를 불러오는 중...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let requestChart = null;
+        let statusChart = null;
+        let resourceChart = null;
+        let isLoading = false;
+        let lastUpdateTime = null;
+
+        // 차트 초기화
+        function initCharts() {
+            // 요청 수 차트
+            const requestCtx = document.getElementById('requestChart').getContext('2d');
+            requestChart = new Chart(requestCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '시간별 요청 수',
+                        data: [],
+                        borderColor: '#FF5722',
+                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 상태 코드 차트
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['2xx 성공', '3xx 리다이렉트', '4xx 클라이언트 오류', '5xx 서버 오류'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: [
+                            '#4CAF50',
+                            '#2196F3',
+                            '#FF9800',
+                            '#f44336'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // 시스템 리소스 차트
+            const resourceCtx = document.getElementById('resourceChart').getContext('2d');
+            resourceChart = new Chart(resourceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU %',
+                            data: [],
+                            borderColor: '#FF5722',
+                            backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'Memory %',
+                            data: [],
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        },
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'minute',
+                                displayFormats: {
+                                    minute: 'HH:mm'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 데이터 새로고침
+        async function refreshData() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            const refreshBtn = document.getElementById('refreshBtn');
+            refreshBtn.classList.add('loading');
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 새로고침 중...';
+
+            try {
+                // 대시보드 데이터 가져오기
+                const response = await fetch('/monitoring/dashboard');
+                const data = await response.json();
+
+                if (data.error) {
+                    showAlert('error', '데이터 로드 실패: ' + data.error);
+                    return;
+                }
+
+                // 통계 업데이트
+                updateStats(data);
+                
+                // 차트 업데이트
+                updateCharts(data);
+                
+                // 테이블 업데이트
+                updateTables(data);
+                
+                lastUpdateTime = new Date();
+                
+            } catch (error) {
+                console.error('데이터 새로고침 실패:', error);
+                showAlert('error', '서버 연결 실패: ' + error.message);
+            } finally {
+                isLoading = false;
+                refreshBtn.classList.remove('loading');
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> 새로고침';
+            }
+        }
+
+        // 통계 업데이트
+        function updateStats(data) {
+            const stats = data.request_stats;
+            const system = data.system_metrics;
+
+            document.getElementById('totalRequests').textContent = stats.total.toLocaleString();
+            document.getElementById('errorRate').textContent = stats.error_rate + '%';
+            document.getElementById('avgResponseTime').textContent = stats.avg_response_time + 'ms';
+            document.getElementById('activeConnections').textContent = system.active_connections;
+            document.getElementById('cpuUsage').textContent = system.cpu_percent.toFixed(1) + '%';
+            document.getElementById('memoryUsage').textContent = system.memory_percent.toFixed(1) + '%';
+
+            // 진행률 바 업데이트
+            document.getElementById('cpuProgress').style.width = system.cpu_percent + '%';
+            document.getElementById('memoryProgress').style.width = system.memory_percent + '%';
+
+            // 상태에 따른 색상 변경
+            updateStatColors(stats.error_rate, system.cpu_percent, system.memory_percent);
+        }
+
+        // 상태 색상 업데이트
+        function updateStatColors(errorRate, cpuPercent, memoryPercent) {
+            const errorRateChange = document.getElementById('errorRateChange');
+            if (errorRate > 5) {
+                errorRateChange.className = 'stat-change negative';
+                showAlert('warning', `오류율이 ${errorRate}%로 높습니다.`);
+            } else {
+                errorRateChange.className = 'stat-change positive';
+            }
+
+            // CPU/메모리 경고
+            if (cpuPercent > 80) {
+                showAlert('warning', `CPU 사용률이 ${cpuPercent.toFixed(1)}%로 높습니다.`);
+            }
+            
+            if (memoryPercent > 80) {
+                showAlert('warning', `메모리 사용률이 ${memoryPercent.toFixed(1)}%로 높습니다.`);
+            }
+        }
+
+        // 차트 업데이트
+        function updateCharts(data) {
+            // 시간별 요청 수 차트
+            if (data.hourly_requests && requestChart) {
+                const labels = data.hourly_requests.map(item => item.hour + ':00');
+                const requests = data.hourly_requests.map(item => item.requests);
+                
+                requestChart.data.labels = labels;
+                requestChart.data.datasets[0].data = requests;
+                requestChart.update();
+            }
+
+            // 상태 코드 분포 (샘플 데이터)
+            if (statusChart) {
+                const total = data.request_stats.total;
+                const failed = data.request_stats.failed;
+                const success = total - failed;
+                
+                statusChart.data.datasets[0].data = [
+                    success * 0.9,  // 2xx
+                    success * 0.1,  // 3xx
+                    failed * 0.7,   // 4xx
+                    failed * 0.3    // 5xx
+                ];
+                statusChart.update();
+            }
+
+            // 리소스 차트 (실시간 데이터 추가)
+            if (resourceChart) {
+                const now = new Date();
+                const timeLabel = now.toISOString();
+                
+                // 최대 50개 데이터 포인트 유지
+                if (resourceChart.data.labels.length >= 50) {
+                    resourceChart.data.labels.shift();
+                    resourceChart.data.datasets[0].data.shift();
+                    resourceChart.data.datasets[1].data.shift();
+                }
+                
+                resourceChart.data.labels.push(timeLabel);
+                resourceChart.data.datasets[0].data.push(data.system_metrics.cpu_percent);
+                resourceChart.data.datasets[1].data.push(data.system_metrics.memory_percent);
+                resourceChart.update();
+            }
+        }
+
+        // 테이블 업데이트
+        function updateTables(data) {
+            // 에러 로그 테이블
+            const errorLogsTable = document.getElementById('errorLogsTable');
+            if (data.recent_errors && data.recent_errors.length > 0) {
+                errorLogsTable.innerHTML = data.recent_errors.map(error => `
+                    <tr>
+                        <td>${new Date(error.timestamp).toLocaleString()}</td>
+                        <td><span class="badge error">${error.type}</span></td>
+                        <td>${error.message.substring(0, 50)}...</td>
+                        <td>${error.path}</td>
+                        <td><span class="badge error">ERROR</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                errorLogsTable.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #4CAF50;">
+                            <i class="fas fa-check-circle"></i> 최근 에러가 없습니다
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // 인기 페이지 테이블
+            const popularPagesTable = document.getElementById('popularPagesTable');
+            if (data.popular_pages && data.popular_pages.length > 0) {
+                const totalHits = data.popular_pages.reduce((sum, page) => sum + page.hits, 0);
+                popularPagesTable.innerHTML = data.popular_pages.map(page => `
+                    <tr>
+                        <td>${page.path}</td>
+                        <td>${page.hits.toLocaleString()}</td>
+                        <td>${((page.hits / totalHits) * 100).toFixed(1)}%</td>
+                    </tr>
+                `).join('');
+            } else {
+                popularPagesTable.innerHTML = `
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #666;">
+                            데이터가 없습니다
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 알림 표시
+        function showAlert(type, message) {
+            const alertsContainer = document.getElementById('alertsContainer');
+            const alertId = 'alert_' + Date.now();
+            
+            const alertHtml = `
+                <div class="alert ${type}" id="${alertId}">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
+                    ${message}
+                </div>
+            `;
+            
+            alertsContainer.insertAdjacentHTML('afterbegin', alertHtml);
+            
+            // 5초 후 자동 제거
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.remove();
+                }
+            }, 5000);
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📊 AIRISS v4.0 모니터링 대시보드 초기화');
+            
+            initCharts();
+            refreshData();
+            
+            // 30초마다 자동 새로고침
+            setInterval(refreshData, 30000);
+            
+            console.log('✅ 모니터링 대시보드 준비 완료');
+        });
+
+        // 키보드 단축키
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                refreshData();
+            }
+        });
+    </script>
+</body>
+</html>
