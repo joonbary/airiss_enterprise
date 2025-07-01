@@ -1,0 +1,319 @@
+name: 🏷️ Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v4.0.1)'
+        required: true
+        type: string
+      release_type:
+        description: 'Release type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ================================
+  # 릴리즈 노트 생성
+  # ================================
+  generate-release-notes:
+    name: 📝 Generate Release Notes
+    runs-on: ubuntu-latest
+    outputs:
+      release_notes: ${{ steps.notes.outputs.release_notes }}
+      version: ${{ steps.version.outputs.version }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🏷️ Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 📝 Generate release notes
+      id: notes
+      run: |
+        # 이전 태그와 현재 태그 사이의 커밋 기반으로 릴리즈 노트 생성
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+        CURRENT_TAG="${{ steps.version.outputs.version }}"
+        
+        echo "# AIRISS $CURRENT_TAG Release Notes" > release_notes.md
+        echo "" >> release_notes.md
+        echo "## 🚀 What's New" >> release_notes.md
+        echo "" >> release_notes.md
+        
+        if [ -n "$PREVIOUS_TAG" ]; then
+          echo "### 📋 Changes since $PREVIOUS_TAG" >> release_notes.md
+          echo "" >> release_notes.md
+          
+          # 새로운 기능
+          echo "### ✨ Features" >> release_notes.md
+          git log $PREVIOUS_TAG..HEAD --oneline --grep="feat:" --pretty=format:"- %s (%h)" >> release_notes.md || true
+          echo "" >> release_notes.md
+          
+          # 버그 수정
+          echo "### 🐛 Bug Fixes" >> release_notes.md
+          git log $PREVIOUS_TAG..HEAD --oneline --grep="fix:" --pretty=format:"- %s (%h)" >> release_notes.md || true
+          echo "" >> release_notes.md
+          
+          # 문서 업데이트
+          echo "### 📝 Documentation" >> release_notes.md
+          git log $PREVIOUS_TAG..HEAD --oneline --grep="docs:" --pretty=format:"- %s (%h)" >> release_notes.md || true
+          echo "" >> release_notes.md
+          
+          # 기타 개선사항
+          echo "### 🔧 Improvements" >> release_notes.md
+          git log $PREVIOUS_TAG..HEAD --oneline --grep="refactor:\|perf:\|style:" --pretty=format:"- %s (%h)" >> release_notes.md || true
+          echo "" >> release_notes.md
+        fi
+        
+        echo "## 📦 Installation" >> release_notes.md
+        echo "" >> release_notes.md
+        echo '```bash' >> release_notes.md
+        echo "git clone https://github.com/joonbary/airiss_enterprise.git" >> release_notes.md
+        echo "cd airiss_enterprise" >> release_notes.md
+        echo "git checkout $CURRENT_TAG" >> release_notes.md
+        echo "pip install -r requirements.txt" >> release_notes.md
+        echo "python run_server.py" >> release_notes.md
+        echo '```' >> release_notes.md
+        echo "" >> release_notes.md
+        
+        echo "## 🔧 Breaking Changes" >> release_notes.md
+        echo "" >> release_notes.md
+        if git log $PREVIOUS_TAG..HEAD --oneline --grep="BREAKING CHANGE" | grep -q .; then
+          git log $PREVIOUS_TAG..HEAD --oneline --grep="BREAKING CHANGE" --pretty=format:"- %s (%h)" >> release_notes.md
+        else
+          echo "No breaking changes in this release." >> release_notes.md
+        fi
+        echo "" >> release_notes.md
+        
+        echo "## 🙏 Contributors" >> release_notes.md
+        echo "" >> release_notes.md
+        git log $PREVIOUS_TAG..HEAD --format='%aN' | sort -u | sed 's/^/- @/' >> release_notes.md || true
+        
+        # GitHub 출력으로 설정
+        echo "release_notes<<EOF" >> $GITHUB_OUTPUT
+        cat release_notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: 📤 Upload release notes
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-notes
+        path: release_notes.md
+
+  # ================================
+  # Docker 이미지 빌드 및 푸시
+  # ================================
+  build-and-push-image:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: generate-release-notes
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔑 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🏷️ Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+
+    - name: 🏗️ Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # ================================
+  # GitHub 릴리즈 생성
+  # ================================
+  create-github-release:
+    name: 🎉 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [generate-release-notes, build-and-push-image]
+    permissions:
+      contents: write
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📥 Download release notes
+      uses: actions/download-artifact@v3
+      with:
+        name: release-notes
+
+    - name: 🎉 Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ needs.generate-release-notes.outputs.version }}
+        name: "AIRISS ${{ needs.generate-release-notes.outputs.version }}"
+        body_path: release_notes.md
+        draft: false
+        prerelease: ${{ contains(needs.generate-release-notes.outputs.version, '-') }}
+        generate_release_notes: true
+        files: |
+          requirements.txt
+          CHANGELOG.md
+          README.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ================================
+  # 프로덕션 배포
+  # ================================
+  deploy-production:
+    name: 🚀 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [generate-release-notes, build-and-push-image, create-github-release]
+    if: "!contains(needs.generate-release-notes.outputs.version, '-')"
+    environment:
+      name: production
+      url: https://airiss.okfinancial.com
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    # 실제 배포 단계 (환경에 따라 수정)
+    - name: 🚀 Deploy to Kubernetes
+      run: |
+        echo "🚀 Deploying AIRISS ${{ needs.generate-release-notes.outputs.version }} to production..."
+        echo "실제 배포 명령어:"
+        echo "kubectl set image deployment/airiss-backend airiss=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.generate-release-notes.outputs.version }}"
+        echo "kubectl rollout status deployment/airiss-backend"
+        
+        # 실제 환경에서는 다음과 같은 명령어 사용:
+        # kubectl set image deployment/airiss-backend airiss=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.generate-release-notes.outputs.version }}
+        # kubectl rollout status deployment/airiss-backend
+
+    - name: 🏥 Health Check
+      run: |
+        echo "🏥 Performing health check..."
+        # 실제 환경에서는 헬스체크 API 호출
+        # curl -f https://airiss.okfinancial.com/health || exit 1
+
+    - name: 📊 Update monitoring
+      run: |
+        echo "📊 Updating monitoring dashboards..."
+        echo "Version: ${{ needs.generate-release-notes.outputs.version }}"
+        echo "Deployment time: $(date)"
+
+  # ================================
+  # 릴리즈 후 작업
+  # ================================
+  post-release:
+    name: 📮 Post-Release Tasks
+    runs-on: ubuntu-latest
+    needs: [generate-release-notes, deploy-production]
+    if: always() && needs.generate-release-notes.result == 'success'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📧 Send release notification
+      run: |
+        echo "📧 Sending release notification..."
+        echo "✅ AIRISS ${{ needs.generate-release-notes.outputs.version }} has been released!"
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.generate-release-notes.outputs.version }}"
+        
+        # 실제 환경에서는 Slack, Teams, 이메일 등으로 알림 발송
+        # curl -X POST -H 'Content-type: application/json' \
+        #   --data '{"text":"🚀 AIRISS ${{ needs.generate-release-notes.outputs.version }} released!"}' \
+        #   ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: 📊 Update documentation
+      run: |
+        echo "📊 Updating documentation..."
+        echo "API documentation will be updated with new version"
+        # 실제로는 API 문서 자동 업데이트 스크립트 실행
+
+    - name: 🔄 Create next development branch
+      run: |
+        echo "🔄 Setting up next development cycle..."
+        # 다음 개발 브랜치 생성 로직
+        CURRENT_VERSION="${{ needs.generate-release-notes.outputs.version }}"
+        echo "Current version: $CURRENT_VERSION"
+        echo "Next development branch setup complete"
+
+  # ================================
+  # 롤백 준비
+  # ================================
+  prepare-rollback:
+    name: 🔄 Prepare Rollback
+    runs-on: ubuntu-latest
+    needs: [generate-release-notes, deploy-production]
+    if: failure()
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔄 Prepare rollback information
+      run: |
+        echo "🚨 Deployment failed! Preparing rollback information..."
+        echo "Failed version: ${{ needs.generate-release-notes.outputs.version }}"
+        echo "Rollback procedure:"
+        echo "1. kubectl rollout undo deployment/airiss-backend"
+        echo "2. Verify previous version is running"
+        echo "3. Update DNS if necessary"
+        echo "4. Send incident notification"
+
+    - name: 📝 Create incident report
+      run: |
+        echo "📝 Creating incident report..."
+        echo "Timestamp: $(date)"
+        echo "Failed Release: ${{ needs.generate-release-notes.outputs.version }}"
+        echo "Workflow Run: ${{ github.run_id }}"
+        echo "Repository: ${{ github.repository }}"

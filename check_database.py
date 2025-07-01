@@ -1,215 +1,107 @@
-# check_database.py
-# AIRISS v4.0 SQLite 데이터베이스 상태 확인 스크립트
+#!/usr/bin/env python3
+"""
+AIRISS 데이터베이스 상태 확인 스크립트
+현재 데이터베이스에 어떤 jobs와 results가 있는지 확인
+"""
 
-import sqlite3
-import json
-from datetime import datetime
-import pandas as pd
+import asyncio
+import sys
+import os
 
-class Colors:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
+# AIRISS 프로젝트 경로 추가
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-class DatabaseChecker:
-    def __init__(self, db_path: str = "airiss.db"):
-        self.db_path = db_path
+from app.db.sqlite_service import SQLiteService
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+async def check_database_status():
+    """데이터베이스 상태 확인"""
+    
+    print("=" * 60)
+    print("🔍 AIRISS 데이터베이스 상태 확인")
+    print("=" * 60)
+    
+    try:
+        # SQLiteService 인스턴스 생성
+        sqlite_service = SQLiteService()
         
-    def print_step(self, message: str, status: str = "INFO"):
-        if status == "SUCCESS":
-            color = Colors.GREEN
-            symbol = "✅"
-        elif status == "ERROR":
-            color = Colors.RED
-            symbol = "❌"
-        elif status == "WARNING":
-            color = Colors.YELLOW
-            symbol = "⚠️"
-        else:
-            color = Colors.BLUE
-            symbol = "ℹ️"
+        # 1. 데이터베이스 초기화 확인
+        await sqlite_service.init_database()
+        print("✅ 데이터베이스 초기화 성공")
         
-        print(f"{color}{symbol} {message}{Colors.END}")
-    
-    def check_database_exists(self):
-        """데이터베이스 파일 존재 확인"""
-        import os
-        if os.path.exists(self.db_path):
-            size = os.path.getsize(self.db_path)
-            self.print_step(f"데이터베이스 파일 존재: {self.db_path} ({size} bytes)", "SUCCESS")
-            return True
-        else:
-            self.print_step(f"데이터베이스 파일 없음: {self.db_path}", "ERROR")
-            return False
-    
-    def check_tables(self):
-        """테이블 구조 확인"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 테이블 목록 조회
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-            tables = cursor.fetchall()
-            
-            self.print_step(f"발견된 테이블: {[table[0] for table in tables]}", "SUCCESS")
-            
-            expected_tables = ['files', 'jobs', 'results']
-            for table_name in expected_tables:
-                if any(table[0] == table_name for table in tables):
-                    # 테이블 스키마 확인
-                    cursor.execute(f"PRAGMA table_info({table_name});")
-                    schema = cursor.fetchall()
-                    columns = [col[1] for col in schema]
-                    self.print_step(f"{table_name} 테이블 컬럼: {columns}", "SUCCESS")
-                else:
-                    self.print_step(f"{table_name} 테이블 없음", "ERROR")
-            
-            conn.close()
-            return True
-            
-        except Exception as e:
-            self.print_step(f"테이블 확인 오류: {e}", "ERROR")
-            return False
-    
-    def check_data_counts(self):
-        """데이터 개수 확인"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 각 테이블의 레코드 수 확인
-            tables = ['files', 'jobs', 'results']
-            
-            for table in tables:
-                try:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table};")
-                    count = cursor.fetchone()[0]
-                    self.print_step(f"{table} 테이블 레코드 수: {count}개", "SUCCESS")
-                except:
-                    self.print_step(f"{table} 테이블 조회 실패", "ERROR")
-            
-            conn.close()
-            return True
-            
-        except Exception as e:
-            self.print_step(f"데이터 개수 확인 오류: {e}", "ERROR")
-            return False
-    
-    def check_recent_jobs(self):
-        """최근 작업 확인"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # 최근 작업 5개 조회
-            cursor.execute("""
-                SELECT id, file_id, status, created_at, updated_at 
-                FROM jobs 
-                ORDER BY created_at DESC 
-                LIMIT 5;
-            """)
-            
-            jobs = cursor.fetchall()
-            
-            if jobs:
-                self.print_step("최근 작업 목록:", "SUCCESS")
-                for job in jobs:
-                    job_id, file_id, status, created_at, updated_at = job
-                    print(f"  📋 {job_id[:8]}... | {status} | {created_at}")
-            else:
-                self.print_step("저장된 작업이 없습니다", "WARNING")
-            
-            conn.close()
-            return True
-            
-        except Exception as e:
-            self.print_step(f"최근 작업 확인 오류: {e}", "ERROR")
-            return False
-    
-    def check_job_id_consistency(self):
-        """Job ID 일치성 확인"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # jobs 테이블에서 job_data 내부의 job_id와 테이블의 id 비교
-            cursor.execute("SELECT id, job_data FROM jobs;")
-            jobs = cursor.fetchall()
-            
-            inconsistent_count = 0
-            
-            for job in jobs:
-                db_id = job[0]
-                try:
-                    job_data = json.loads(job[1])
-                    data_job_id = job_data.get('job_id')
-                    
-                    if db_id != data_job_id:
-                        inconsistent_count += 1
-                        self.print_step(f"ID 불일치: DB={db_id[:8]}..., Data={data_job_id[:8] if data_job_id else 'None'}...", "ERROR")
-                except:
-                    self.print_step(f"job_data 파싱 실패: {db_id[:8]}...", "WARNING")
-            
-            if inconsistent_count == 0:
-                self.print_step("모든 Job ID가 일치합니다", "SUCCESS")
-            else:
-                self.print_step(f"{inconsistent_count}개의 Job ID 불일치 발견", "ERROR")
-            
-            conn.close()
-            return inconsistent_count == 0
-            
-        except Exception as e:
-            self.print_step(f"Job ID 일치성 확인 오류: {e}", "ERROR")
-            return False
-    
-    def run_check(self):
-        """전체 데이터베이스 검사"""
-        print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
-        print(f"{Colors.BOLD}{Colors.BLUE}🗄️ AIRISS v4.0 SQLite 데이터베이스 상태 확인{Colors.END}")
-        print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
-        print()
+        # 2. 파일 목록 확인
+        files = await sqlite_service.list_files()
+        print(f"\n📁 업로드된 파일 수: {len(files)}")
+        for file in files[:5]:  # 최근 5개만 표시
+            print(f"   - {file['filename']} (ID: {file['id'][:8]}...)")
         
-        success_count = 0
-        total_checks = 5
+        # 3. 작업 목록 확인
+        jobs = await sqlite_service.list_jobs()
+        print(f"\n📋 분석 작업 수: {len(jobs)}")
+        for job in jobs[:10]:  # 최근 10개만 표시
+            print(f"   - Job ID: {job['id'][:8]}... | Status: {job['status']} | Records: {job.get('total_records', 0)}")
         
-        # 1. 데이터베이스 파일 존재 확인
-        if self.check_database_exists():
-            success_count += 1
-            
-            # 2. 테이블 구조 확인
-            if self.check_tables():
-                success_count += 1
+        # 4. 완료된 작업들 확인
+        completed_jobs = await sqlite_service.get_completed_analysis_jobs()
+        print(f"\n✅ 완료된 작업 수: {len(completed_jobs)}")
+        
+        if completed_jobs:
+            print("\n📊 완료된 작업 상세:")
+            for job in completed_jobs[:5]:
+                job_id = job['job_id']
+                print(f"\n   🎯 Job ID: {job_id}")
+                print(f"      파일명: {job.get('filename', 'N/A')}")
+                print(f"      상태: {job['status']}")
+                print(f"      처리된 레코드: {job.get('processed_records', 0)}")
                 
-                # 3. 데이터 개수 확인
-                if self.check_data_counts():
-                    success_count += 1
-                    
-                    # 4. 최근 작업 확인
-                    if self.check_recent_jobs():
-                        success_count += 1
-                        
-                        # 5. Job ID 일치성 확인 (핵심)
-                        if self.check_job_id_consistency():
-                            success_count += 1
+                # 해당 작업의 결과 확인
+                results = await sqlite_service.get_analysis_results(job_id)
+                print(f"      분석 결과 수: {len(results)}")
+                
+                if results:
+                    # 첫 번째 결과 샘플 확인
+                    first_result = results[0]
+                    print(f"      샘플 UID: {first_result['uid']}")
+                    result_data = first_result['result_data']
+                    if isinstance(result_data, dict):
+                        print(f"      샘플 점수: {result_data.get('AIRISS_v2_종합점수', 'N/A')}")
+                        print(f"      샘플 등급: {result_data.get('OK등급', 'N/A')}")
+                
+                print()
         
-        print(f"\n{Colors.BOLD}{'='*60}{Colors.END}")
+        # 5. 특정 job_id 확인 (스크린샷에서 오류가 발생한 것)
+        problem_job_id = "ab4f35d3-ce09-4607-bf4f-e44ec0ac3f7e"
+        print(f"🔍 문제 job_id 확인: {problem_job_id}")
         
-        if success_count == total_checks:
-            print(f"{Colors.GREEN}{Colors.BOLD}🎉 데이터베이스 상태 양호!{Colors.END}")
-            print(f"{Colors.GREEN}✅ 모든 테이블 정상{Colors.END}")
-            print(f"{Colors.GREEN}✅ Job ID 일치성 확인{Colors.END}")
-        else:
-            print(f"{Colors.RED}{Colors.BOLD}⚠️ 데이터베이스 문제 발견 ({success_count}/{total_checks}){Colors.END}")
+        problem_job = await sqlite_service.get_analysis_job(problem_job_id)
+        if problem_job:
+            print(f"   ✅ Job 존재: {problem_job['status']}")
             
-        print(f"{Colors.BOLD}{'='*60}{Colors.END}")
-
-def main():
-    checker = DatabaseChecker()
-    checker.run_check()
+            problem_results = await sqlite_service.get_analysis_results(problem_job_id)
+            print(f"   📊 결과 수: {len(problem_results)}")
+            
+            if problem_results:
+                print("   🎯 사용 가능한 UID들:")
+                for result in problem_results[:10]:
+                    print(f"      - {result['uid']}")
+        else:
+            print(f"   ❌ Job 없음: {problem_job_id}")
+        
+        # 6. 데이터베이스 통계
+        stats = await sqlite_service.get_database_stats()
+        print(f"\n📈 데이터베이스 통계:")
+        print(f"   - 파일: {stats.get('files_count', 0)}개")
+        print(f"   - 작업: {stats.get('jobs_count', 0)}개") 
+        print(f"   - 결과: {stats.get('results_count', 0)}개")
+        print(f"   - DB 경로: {stats.get('db_path', 'N/A')}")
+        
+    except Exception as e:
+        print(f"❌ 오류 발생: {e}")
+        import traceback
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(check_database_status())

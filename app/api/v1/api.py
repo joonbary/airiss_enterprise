@@ -5,7 +5,7 @@ AIRISS v4.0 API 라우터
 """
 
 from fastapi import APIRouter
-from app.api.v1.endpoints import analysis
+from app.api.v1.endpoints import analysis, employee
 
 api_router = APIRouter()
 
@@ -14,6 +14,13 @@ api_router.include_router(
     analysis.router,
     prefix="/analysis",
     tags=["analysis"]
+)
+
+# 직원 관련 엔드포인트
+api_router.include_router(
+    employee.router,
+    prefix="/employee",
+    tags=["employee"]
 )
 
 # 향후 추가 엔드포인트

@@ -1,5 +1,5 @@
 # app/main.py
-# AIRISS v4.1 향상된 UI/UX 버전 - 고급 차트 시각화 + AI 인사이트 대시보드
+# AIRISS v4.1 향상된 UI/UX 버전 - 개인결과 조회 수정 버전
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -249,7 +249,7 @@ try:
 except Exception as e:
     logger.error(f"❌ Analysis router error: {e}")
 
-# 🔧 FIXED: Employee API 직접 등록 (404 에러 해결)
+# 🔧 FIXED: Employee API 직접 등록 (v1 API 라우터 문제 해결)
 try:
     from app.api.v1.endpoints.employee import router as employee_router
     app.include_router(employee_router, prefix="/api/v1/employee", tags=["employee"])
@@ -257,13 +257,15 @@ try:
 except Exception as e:
     logger.error(f"❌ Employee router error: {e}")
 
-# 기존 v1 API 라우터도 시도 (백업)
+# 기존 v1 API 라우터는 일시적으로 비활성화 (중복 방지)
+"""
 try:
     from app.api.v1.api import api_router as v1_api_router
     app.include_router(v1_api_router, prefix="/api/v1")
     logger.info("✅ v1 API router registered (/api/v1)")
 except Exception as e:
-    logger.warning(f"⚠️ v1 API router error (employee already registered): {e}")
+    logger.error(f"❌ v1 API router error: {e}")
+"""
 
 # 메인 실행
 if __name__ == "__main__":
@@ -276,10 +278,11 @@ if __name__ == "__main__":
     logger.info(f"📊 Advanced Chart Visualization: Radar + Performance Prediction")
     logger.info(f"🧠 Deep Learning Features: Bias Detection + AI Insights")
     logger.info(f"🎯 User Experience: Smart Notifications + Real-time Progress")
+    logger.info("🔧 Fixed: Employee API router registered directly")
     
     try:
         uvicorn.run(
-            "app.main:app",
+            "main_fixed_employee:app",
             host=SERVER_HOST, 
             port=SERVER_PORT, 
             log_level="info",

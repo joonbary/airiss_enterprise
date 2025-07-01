@@ -1,5 +1,5 @@
 # app/main.py
-# AIRISS v4.1 향상된 UI/UX 버전 - 고급 차트 시각화 + AI 인사이트 대시보드
+# AIRISS v4.1 향상된 UI/UX 버전 - 고급 차트 시각화 + AI 인사이트
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -199,10 +199,10 @@ async def health_check_analysis():
     except Exception as e:
         return {"status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
 
-# WebSocket 엔드포인트들
+# WebSocket 엔드포인트들 (기존 유지)
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str, channels: str = "analysis,alerts"):
-    """메인 WebSocket 엔드포인트"""
+    """메인 WebSocket 엔드포인트 (기존 호환성)"""
     logger.info(f"🔌 Enhanced WebSocket connection: {client_id}")
     channel_list = channels.split(",") if channels else []
     
@@ -249,21 +249,17 @@ try:
 except Exception as e:
     logger.error(f"❌ Analysis router error: {e}")
 
-# 🔧 FIXED: Employee API 직접 등록 (404 에러 해결)
+# 향상된 WebSocket 라우터 등록 (새로 추가)
 try:
-    from app.api.v1.endpoints.employee import router as employee_router
-    app.include_router(employee_router, prefix="/api/v1/employee", tags=["employee"])
-    logger.info("✅ Employee router registered directly (/api/v1/employee)")
+    from app.api.websocket_enhanced import router as websocket_enhanced_router
+    app.include_router(websocket_enhanced_router)
+    logger.info("✅ Enhanced WebSocket router registered")
+    logger.info("🎯 지원되는 WebSocket 엔드포인트:")
+    logger.info("   - /ws/{client_id} (기존 호환성)")
+    logger.info("   - /ws/analysis/{job_id} (기존 호환성)")
+    logger.info("   - 향상된 채널 기반 통신 지원")
 except Exception as e:
-    logger.error(f"❌ Employee router error: {e}")
-
-# 기존 v1 API 라우터도 시도 (백업)
-try:
-    from app.api.v1.api import api_router as v1_api_router
-    app.include_router(v1_api_router, prefix="/api/v1")
-    logger.info("✅ v1 API router registered (/api/v1)")
-except Exception as e:
-    logger.warning(f"⚠️ v1 API router error (employee already registered): {e}")
+    logger.error(f"❌ Enhanced WebSocket router error: {e}")
 
 # 메인 실행
 if __name__ == "__main__":
@@ -276,6 +272,7 @@ if __name__ == "__main__":
     logger.info(f"📊 Advanced Chart Visualization: Radar + Performance Prediction")
     logger.info(f"🧠 Deep Learning Features: Bias Detection + AI Insights")
     logger.info(f"🎯 User Experience: Smart Notifications + Real-time Progress")
+    logger.info(f"🔌 Enhanced WebSocket: 채널 기반 + 향상된 에러 처리")
     
     try:
         uvicorn.run(

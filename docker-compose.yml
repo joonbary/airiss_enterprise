@@ -1,134 +1,274 @@
-# AIRISS v4.0 Enhanced - Docker Compose for Production Deployment
+# AIRISS v4.0 Docker Compose Configuration
+# Production-ready multi-service setup
+
 version: '3.8'
 
 services:
-  # AIRISS v4.0 Enhanced Main Application
-  airiss-app:
+  # ================================
+  # PostgreSQL Database
+  # ================================
+  postgres:
+    image: postgres:14-alpine
+    container_name: airiss_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-airiss}
+      POSTGRES_USER: ${POSTGRES_USER:-airiss_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-airiss_secure_password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - airiss_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airiss_user} -d ${POSTGRES_DB:-airiss}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ================================
+  # Redis Cache
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: airiss_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-airiss_redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - airiss_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+  # ================================
+  # AIRISS Backend API
+  # ================================
+  airiss_backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: airiss-v4-enhanced
+      target: production
+    container_name: airiss_backend
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-airiss_user}:${POSTGRES_PASSWORD:-airiss_secure_password}@postgres:5432/${POSTGRES_DB:-airiss}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-airiss_redis_password}@redis:6379/0
+      
+      # Application
+      SECRET_KEY: ${SECRET_KEY:-your_super_secret_key_change_in_production}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      
+      # External APIs
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      
+      # Security
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,airiss.okfinancial.com}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,https://airiss.okfinancial.com}
+      
+      # Performance
+      WORKERS: ${WORKERS:-4}
+      MAX_CONNECTIONS: ${MAX_CONNECTIONS:-100}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./temp_data:/app/temp_data
     ports:
       - "8002:8002"
-    environment:
-      - AIRISS_ENV=production
-      - SERVER_HOST=0.0.0.0
-      - SERVER_PORT=8002
-      - WS_HOST=localhost
-      - PYTHONPATH=/app
-    volumes:
-      - airiss_data:/app/data
-      - airiss_logs:/app/logs
-      - airiss_uploads:/app/uploads
     networks:
-      - airiss-network
-    restart: unless-stopped
+      - airiss_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.airiss.rule=Host(`airiss.okfinancial.com`)"
-      - "traefik.http.routers.airiss.tls=true"
-      - "traefik.http.routers.airiss.tls.certresolver=letsencrypt"
+      start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
-  # Nginx Reverse Proxy (Optional)
+  # ================================
+  # Nginx Reverse Proxy
+  # ================================
   nginx:
     image: nginx:alpine
-    container_name: airiss-nginx
+    container_name: airiss_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./static:/var/www/static:ro
+      - ./logs/nginx:/var/log/nginx
     ports:
       - "80:80"
       - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - airiss_static:/var/www/static:ro
-      - letsencrypt_certs:/etc/letsencrypt:ro
     networks:
-      - airiss-network
+      - airiss_network
     depends_on:
-      - airiss-app
-    restart: unless-stopped
-    profiles:
-      - nginx
+      - airiss_backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Redis for Caching (Optional)
-  redis:
-    image: redis:7-alpine
-    container_name: airiss-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - airiss-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass airiss2024!
-    profiles:
-      - redis
-
-  # Monitoring with Prometheus (Optional)
+  # ================================
+  # Monitoring - Prometheus (Optional)
+  # ================================
   prometheus:
     image: prom/prometheus:latest
-    container_name: airiss-prometheus
-    ports:
-      - "9090:9090"
+    container_name: airiss_prometheus
+    restart: unless-stopped
+    profiles: ["monitoring"]
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
     networks:
-      - airiss-network
-    restart: unless-stopped
-    profiles:
-      - monitoring
+      - airiss_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
 
-  # Grafana for Dashboards (Optional)
+  # ================================
+  # Monitoring - Grafana (Optional)
+  # ================================
   grafana:
     image: grafana/grafana:latest
-    container_name: airiss-grafana
-    ports:
-      - "3000:3000"
+    container_name: airiss_grafana
+    restart: unless-stopped
+    profiles: ["monitoring"]
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=airiss2024!
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: false
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
     networks:
-      - airiss-network
+      - airiss_network
+    depends_on:
+      - prometheus
+
+  # ================================
+  # Worker for Background Tasks (Optional)
+  # ================================
+  airiss_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: airiss_worker
     restart: unless-stopped
-    profiles:
-      - monitoring
+    profiles: ["worker"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-airiss_user}:${POSTGRES_PASSWORD:-airiss_secure_password}@postgres:5432/${POSTGRES_DB:-airiss}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-airiss_redis_password}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your_super_secret_key_change_in_production}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+      - ./temp_data:/app/temp_data
+    networks:
+      - airiss_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["python", "-m", "celery", "worker", "-A", "app.core.celery_app", "--loglevel=info"]
 
+# ================================
 # Networks
+# ================================
 networks:
-  airiss-network:
+  airiss_network:
     driver: bridge
-    name: airiss-network
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
+# ================================
 # Volumes
+# ================================
 volumes:
-  airiss_data:
-    name: airiss_data
-    driver: local
-  airiss_logs:
-    name: airiss_logs
-    driver: local
-  airiss_uploads:
-    name: airiss_uploads
-    driver: local
-  airiss_static:
-    name: airiss_static
+  postgres_data:
     driver: local
   redis_data:
-    name: redis_data
     driver: local
   prometheus_data:
-    name: prometheus_data
     driver: local
   grafana_data:
-    name: grafana_data
     driver: local
-  letsencrypt_certs:
-    name: letsencrypt_certs
-    driver: local
+
+# ================================
+# Usage Examples:
+# ================================
+# 
+# Production deployment:
+# docker-compose up -d
+# 
+# Development with monitoring:
+# docker-compose --profile monitoring up -d
+# 
+# Full stack with workers:
+# docker-compose --profile monitoring --profile worker up -d
+# 
+# View logs:
+# docker-compose logs -f airiss_backend
+# 
+# Scale backend:
+# docker-compose up -d --scale airiss_backend=3
+# 
+# Update single service:
+# docker-compose up -d --no-deps airiss_backend
+#

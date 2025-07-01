@@ -1,35 +1,493 @@
+# AIRISS v4.0 .gitignore
+
+# ================================
 # Python
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
+.pdm-python
+.pdm-build/
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
 env/
 venv/
 ENV/
-.venv
-.env
+env.bak/
+venv.bak/
 
-# IDE
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# ================================
+# Node.js / JavaScript
+# ================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+.env.production
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# ================================
+# IDE / Editors
+# ================================
+# Visual Studio Code
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# Local History for Visual Studio Code
+.history/
+
+# Built Visual Studio Code Extensions
+*.vsix
+
+# JetBrains IDEs
 .idea/
 *.swp
 *.swo
+*~
 
-# Project specific
-uploads/
-logs/
-*.log
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+[._]*.s[a-v][a-z]
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ================================
+# Operating System
+# ================================
+# macOS
 .DS_Store
-node_modules/
-dist/
-build/
-*.egg-info/
-.coverage
-htmlcov/
-.pytest_cache/
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# Database
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ================================
+# AIRISS Project Specific
+# ================================
+# Database files
 *.db
 *.sqlite3
+*.sqlite
 postgres_data/
+mysql_data/
+
+# Upload files
+uploads/
+uploaded_files/
+temp_uploads/
+
+# Log files
+logs/
+*.log
+debug_logs/
+error_logs/
+
+# Cache and temporary files
+cache/
+temp/
+tmp/
+.cache/
+temp_data/
+
+# Test results and coverage
+test_results/
+test-results/
+.coverage
+coverage/
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# API Keys and secrets
+secrets/
+*.pem
+*.key
+*.crt
+*.csr
+config/secrets.json
+
+# Generated files
+generated/
+auto_generated/
+
+# Backup files
+backup/
+backup_*/
+*.backup
+*.bak
+
+# Documentation builds
+docs/_build/
+docs/build/
+
+# Temporary analysis files
+analysis_temp/
+temp_analysis/
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
+# AI Model files (if large)
+models/*.bin
+models/*.safetensors
+models/pytorch_model.bin
+
+# Performance monitoring
+monitoring/
+metrics/
+
+# Local configuration overrides
+config_local.json
+settings_local.py
+
+# IDE workspace files
+workspace.xml
+tasks.xml
+
+# Deployment artifacts
+deploy/
+deployment/
+k8s/secrets/
+
+# ================================
+# Security
+# ================================
+# Never commit these!
+**/secrets.*
+**/private.*
+**/*_secret*
+**/*_private*
+**/api_keys.*
+**/credentials.*
+**/.credentials
+**/service-account*.json
+
+# ================================
+# Performance
+# ================================
+# Profiling results
+*.prof
+*.profile
+
+# Memory dumps
+*.hprof
+heapdump*
+
+# ================================
+# Miscellaneous
+# ================================
+# Compressed archives
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large data files
+*.csv.gz
+large_datasets/
+big_data/
+
+# Temporary office files
+~$*
+
+# Thumbnails
+*.thumbnail
+
+# Package files
+*.deb
+*.rpm
+*.pkg
+*.dmg
+
+# ================================
+# Custom ignores (project specific)
+# ================================
+# Add your project-specific ignores here
+/specific_ignore_pattern

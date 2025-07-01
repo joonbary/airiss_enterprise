@@ -20,7 +20,7 @@ from app.schemas.schemas import FileUploadResponse, FileInfoResponse
 logger = logging.getLogger(__name__)
 
 # 업로드 라우터 생성
-router = APIRouter(prefix="/upload", tags=["upload"])
+router = APIRouter(prefix="/api", tags=["upload"])
 
 # SQLiteService 의존성 주입
 def get_sqlite_service() -> SQLiteService:
@@ -29,7 +29,7 @@ def get_sqlite_service() -> SQLiteService:
     # 실제 사용 시점에서 초기화하도록 변경
     return service
 
-@router.post("/upload/", response_model=FileUploadResponse)
+@router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
     db_service: SQLiteService = Depends(get_sqlite_service)
@@ -263,7 +263,7 @@ async def upload_file(
         
         # ✅ 성공 응답 생성
         response_data = {
-            "id": file_id,
+            "file_id": file_id,
             "filename": file.filename,
             "total_records": total_records,
             "column_count": len(all_columns),
@@ -342,7 +342,7 @@ async def get_file_info(
         
         # 응답 데이터 구성
         response_data = {
-            "id": file_id,
+            "file_id": file_id,
             "filename": file_record.get('filename', 'Unknown'),
             "total_records": current_records,
             "column_count": current_columns,
@@ -406,7 +406,7 @@ async def delete_file(
         logger.error(f"파일 삭제 오류: {str(e)}")
         raise HTTPException(status_code=500, detail=f"파일 삭제 중 오류가 발생했습니다: {str(e)}")
 
-@router.get("/files/")
+@router.get("/files")
 async def list_files(
     db_service: SQLiteService = Depends(get_sqlite_service)
 ):

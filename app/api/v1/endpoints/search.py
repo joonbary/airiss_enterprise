@@ -15,25 +15,39 @@ async def search_employee(
     grade: Optional[str] = Query(None, description="OK등급 필터"),
     db: Session = Depends(get_db)
 ):
-    """개별 직원 검색"""
+    """개별 직원 검색 - UID 또는 등급 필터 (OR 조건)"""
     # 작업 확인
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
     if not job or job.status != "completed":
         raise HTTPException(status_code=404, detail="완료된 작업을 찾을 수 없습니다")
     
-    # 쿼리 작성
-    query = db.query(EmployeeScore).filter(EmployeeScore.job_id == job_id)
+    # 기본 쿼리
+    base_query = db.query(EmployeeScore).filter(EmployeeScore.job_id == job_id)
     
-    if uid:
-        query = query.filter(EmployeeScore.uid == uid)
-    if grade:
-        query = query.filter(EmployeeScore.ok_grade == grade)
+    # 검색 조건 처리 (OR 로직)
+    employee = None
     
-    # 결과 조회
-    employee = query.first()
+    if uid and grade:
+        # 둘 다 있으면 UID 우선 검색
+        employee = base_query.filter(EmployeeScore.uid == uid).first()
+        if not employee:
+            # UID로 못 찾으면 등급으로 검색
+            employee = base_query.filter(EmployeeScore.ok_grade == grade).first()
+    elif uid:
+        # UID만 있는 경우
+        employee = base_query.filter(EmployeeScore.uid == uid).first()
+    elif grade:
+        # 등급만 있는 경우
+        employee = base_query.filter(EmployeeScore.ok_grade == grade).first()
+    else:
+        # 둘 다 없으면 첫 번째 직원 반환 (또는 에러)
+        employee = base_query.first()
+        if not employee:
+            raise HTTPException(status_code=404, detail="검색 조건을 입력하거나 해당 작업에 데이터가 있는지 확인해주세요")
     
     if not employee:
-        raise HTTPException(status_code=404, detail="직원을 찾을 수 없습니다")
+        search_info = f"UID: {uid}" if uid else f"등급: {grade}" if grade else "조건 없음"
+        raise HTTPException(status_code=404, detail=f"검색 조건({search_info})에 해당하는 직원을 찾을 수 없습니다")
     
     # 전체 통계 계산
     all_scores = db.query(EmployeeScore).filter(EmployeeScore.job_id == job_id).all()

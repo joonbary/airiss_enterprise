@@ -29,13 +29,6 @@ const sampleAnalysisResults = {
 function addDebugLog(message, type = 'info') {
     const timestamp = new Date().toLocaleTimeString();
     const debugLog = document.getElementById('debugLog');
-    
-    // debugLog가 없으면 콘솔에만 출력
-    if (!debugLog) {
-        console.log(`[AIRISS v4.1 Enhanced] ${type.toUpperCase()}: ${message}`);
-        return;
-    }
-    
     const logEntry = document.createElement('div');
     logEntry.className = 'debug-entry';
     
@@ -134,12 +127,6 @@ function showNotification(message, type = 'success') {
     const text = document.getElementById('notificationText');
     const icon = document.getElementById('notificationIcon');
     
-    // DOM 요소가 없으면 콘솔에만 출력
-    if (!notification || !text || !icon) {
-        console.log(`[AIRISS v4.1] Notification (${type}): ${message}`);
-        return;
-    }
-    
     const iconMap = {
         'success': 'fas fa-check-circle',
         'error': 'fas fa-times-circle',
@@ -190,17 +177,11 @@ function connectWebSocket() {
 }
 
 function handleWebSocketMessage(data) {
-    addDebugLog(`WebSocket 메시지: ${data.type}, job_id: ${data.job_id}`, 'info');
-    
     if (data.type === 'analysis_progress' && data.job_id === currentJobId) {
         updateProgress(data.progress, data.processed, data.total);
     } else if (data.type === 'analysis_completed' && data.job_id === currentJobId) {
         updateProgress(100, data.total_processed, data.total_processed);
         showNotification(`분석이 완료되었습니다! 평균 점수: ${data.average_score}점`, 'success');
-        
-        // 완료 알림과 다운로드 버튼 표시
-        showCompletionActions(data.job_id, data.average_score);
-        
         setTimeout(() => {
             loadRecentJobs();
             showResultsChart();
@@ -208,41 +189,6 @@ function handleWebSocketMessage(data) {
     } else if (data.type === 'analysis_failed' && data.job_id === currentJobId) {
         showNotification('분석 중 오류가 발생했습니다: ' + data.error, 'error');
         resetAnalysisButton();
-    }
-}
-
-// 분석 완료 시 액션 버튼 표시
-function showCompletionActions(jobId, avgScore) {
-    const actionDiv = document.createElement('div');
-    actionDiv.className = 'completion-actions animate__animated animate__fadeInUp';
-    actionDiv.innerHTML = `
-        <div style="background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-            <h4 style="color: var(--success-color); margin-bottom: 15px;">
-                <i class="fas fa-check-circle"></i> 분석이 완료되었습니다!
-            </h4>
-            <p style="margin-bottom: 20px;">평균 점수: <strong style="font-size: 1.5rem; color: var(--primary-color);">${avgScore}점</strong></p>
-            
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="button" onclick="viewResults('${jobId}')">
-                    <i class="fas fa-chart-bar"></i> 결과 상세보기
-                </button>
-                <button class="button secondary" onclick="showDownloadOptions('${jobId}')">
-                    <i class="fas fa-download"></i> 결과 다운로드
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // 진행률 바 아래에 추가
-    const progressContainer = document.querySelector('.progress-container');
-    if (progressContainer && progressContainer.parentNode) {
-        progressContainer.parentNode.insertBefore(actionDiv, progressContainer.nextSibling);
-        
-        // 30초 후 자동 제거
-        setTimeout(() => {
-            actionDiv.style.opacity = '0';
-            setTimeout(() => actionDiv.remove(), 500);
-        }, 30000);
     }
 }
 
@@ -331,7 +277,7 @@ function uploadFile(file) {
     
     const uploadStartTime = Date.now();
     
-    fetch('/api/upload', {
+    fetch('/upload/upload/', {
         method: 'POST',
         body: formData
     })
@@ -370,10 +316,10 @@ function uploadFile(file) {
 
 // 🧠 분석 시작 시스템
 function startAnalysis() {
-    // 테스트를 위해 바로 분석 시작 (설정 모달 건너뛰기)
+    addDebugLog('=== AI 분석 프로세스 시작 ===', 'info');
+    
     if (!selectedFile || !selectedFile.fileId) {
         showNotification('먼저 파일을 업로드해주세요.', 'error');
-        addDebugLog('파일이 업로드되지 않았습니다. selectedFile:', selectedFile);
         return;
     }
     
@@ -435,9 +381,6 @@ function startAnalysis() {
             currentJobId = data.job_id;
             showNotification('AI 분석이 시작되었습니다. 실시간으로 진행상황을 확인할 수 있습니다.', 'success');
             updateProgress(0, 0, analysisData.sample_size);
-            
-            // 분석 상태 폴링 시작
-            pollAnalysisStatus(data.job_id);
         } else {
             throw new Error(data.detail || '분석 시작 실패: Job ID를 받지 못했습니다');
         }
@@ -447,212 +390,6 @@ function startAnalysis() {
         addDebugLog(`분석 시작 오류: ${error.message}`, 'error');
         showNotification('분석 시작 중 오류: ' + error.message, 'error');
         resetAnalysisButton();
-    });
-}
-
-
-
-// ============================================
-// 분석 설정 관련 함수들 (AIRISS v4.0 개선)
-// ============================================
-
-// 분석 설정 모달 열기
-function openAnalysisSettings() {
-    if (!selectedFile || !selectedFile.fileId) {
-        showNotification('먼저 파일을 업로드해주세요.', 'error');
-        return;
-    }
-    
-    document.getElementById('analysisSettingsModal').style.display = 'flex';
-    updateEstimates();
-    addDebugLog('분석 설정 모달 열림', 'info');
-}
-
-// 분석 설정 모달 닫기
-function closeAnalysisSettings() {
-    document.getElementById('analysisSettingsModal').style.display = 'none';
-    addDebugLog('분석 설정 모달 닫힘', 'info');
-}
-
-// AI 설정 토글
-function toggleAISettings() {
-    const enableAI = document.getElementById('enableAI').checked;
-    const aiSettings = document.getElementById('aiSettings');
-    const costEstimate = document.getElementById('costEstimate');
-    
-    if (enableAI) {
-        aiSettings.style.display = 'block';
-        costEstimate.style.display = 'flex';
-    } else {
-        aiSettings.style.display = 'none';
-        costEstimate.style.display = 'none';
-    }
-    
-    updateEstimates();
-}
-
-// API Key 표시/숨기기
-function toggleApiKeyVisibility() {
-    const apiKeyInput = document.getElementById('apiKey');
-    const eyeIcon = document.getElementById('eyeIcon');
-    
-    if (apiKeyInput.type === 'password') {
-        apiKeyInput.type = 'text';
-        eyeIcon.className = 'fas fa-eye-slash';
-    } else {
-        apiKeyInput.type = 'password';
-        eyeIcon.className = 'fas fa-eye';
-    }
-}
-
-// API Key 검증
-function validateApiKey() {
-    const apiKey = document.getElementById('apiKey').value;
-    
-    if (apiKey && !apiKey.startsWith('sk-')) {
-        showNotification('올바른 OpenAI API Key 형식이 아닙니다.', 'warning');
-        return false;
-    }
-    
-    if (apiKey && apiKey.length < 40) {
-        showNotification('API Key가 너무 짧습니다.', 'warning');
-        return false;
-    }
-    
-    return true;
-}
-
-// 예상 시간 및 비용 업데이트
-function updateEstimates() {
-    const sampleSizeElement = document.querySelector('input[name="sampleSize"]:checked');
-    const sampleSize = sampleSizeElement ? sampleSizeElement.value : '10';
-    const enableAI = document.getElementById('enableAI').checked;
-    const aiModel = document.getElementById('aiModel').value;
-    
-    let actualSize = sampleSize === 'all' ? 
-        (selectedFile?.totalRecords || 100) : parseInt(sampleSize);
-    
-    // 예상 시간 계산
-    let timePerRecord = enableAI ? 0.5 : 0.1; // AI 사용시 더 오래 걸림
-    let estimatedSeconds = actualSize * timePerRecord;
-    let timeText = estimatedSeconds < 60 ? 
-        `약 ${Math.ceil(estimatedSeconds)}초` : 
-        `약 ${Math.ceil(estimatedSeconds / 60)}분`;
-    
-    document.getElementById('estimatedTime').textContent = timeText;
-    
-    // 예상 비용 계산 (AI 사용시만)
-    if (enableAI) {
-        let costPerRecord = 0;
-        switch(aiModel) {
-            case 'gpt-3.5-turbo':
-                costPerRecord = 0.002; // $0.002 per record
-                break;
-            case 'gpt-4':
-                costPerRecord = 0.02; // $0.02 per record
-                break;
-            case 'gpt-4-turbo':
-                costPerRecord = 0.01; // $0.01 per record
-                break;
-        }
-        
-        let estimatedCost = actualSize * costPerRecord;
-        document.getElementById('estimatedCost').textContent = 
-            `$${estimatedCost.toFixed(2)} (약 ${Math.ceil(estimatedCost * 1300)}원)`;
-    }
-}
-
-// 설정에 따라 분석 시작
-function startAnalysisWithSettings() {
-    addDebugLog('=== 설정 기반 AI 분석 시작 ===', 'info');
-    
-    // 설정값 수집
-    const sampleSizeElement = document.querySelector('input[name="sampleSize"]:checked');
-    const sampleSize = sampleSizeElement ? sampleSizeElement.value : '10';
-    const enableAI = document.getElementById('enableAI').checked;
-    const aiModel = document.getElementById('aiModel').value;
-    const apiKey = document.getElementById('apiKey').value;
-    const maxTokens = parseInt(document.getElementById('maxTokens').value) || 1200;
-    const analysisMode = document.getElementById('analysisMode').value;
-    
-    // AI 사용시 API Key 검증
-    if (enableAI && !apiKey) {
-        showNotification('AI 분석을 사용하려면 OpenAI API Key를 입력해주세요.', 'error');
-        return;
-    }
-    
-    if (enableAI && !validateApiKey()) {
-        return;
-    }
-    
-    // 실제 분석 인원수 계산
-    let actualSampleSize = sampleSize === 'all' ? 
-        (selectedFile?.totalRecords || 9999) : parseInt(sampleSize);
-    
-    // 분석 요청 데이터 구성
-    const analysisData = {
-        file_id: selectedFile.fileId,
-        sample_size: actualSampleSize,
-        analysis_mode: analysisMode,
-        enable_ai_feedback: enableAI,
-        openai_api_key: enableAI ? apiKey : null,
-        openai_model: enableAI ? aiModel : 'gpt-3.5-turbo',
-        max_tokens: maxTokens
-    };
-    
-    addDebugLog(`분석 설정: ${JSON.stringify({
-        ...analysisData,
-        openai_api_key: analysisData.openai_api_key ? '***' : null
-    }, null, 2)}`, 'info');
-    
-    // 모달 닫기
-    closeAnalysisSettings();
-    
-    // 분석 시작
-    const startAnalysisBtn = document.getElementById('startAnalysisBtn');
-    startAnalysisBtn.disabled = true;
-    startAnalysisBtn.classList.add('loading');
-    
-    const analyzeBtn = document.getElementById('analyzeBtn');
-    analyzeBtn.disabled = true;
-    analyzeBtn.classList.add('loading');
-    document.getElementById('progressText').textContent = '분석 시작 중...';
-    
-    fetch('/analysis/start', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(analysisData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => Promise.reject(err));
-        }
-        return response.json();
-    })
-    .then(data => {
-        addDebugLog(`분석 시작 성공: Job ID = ${data.job_id}`, 'success');
-        
-        if (data.job_id) {
-            currentJobId = data.job_id;
-            showNotification(
-                `AI 분석이 시작되었습니다. ${actualSampleSize}명 분석 중...`, 
-                'success'
-            );
-            updateProgress(0, 0, actualSampleSize);
-            
-            // 완료시 자동으로 결과 다운로드 버튼 표시
-            window.currentAnalysisSettings = analysisData;
-        }
-    })
-    .catch(error => {
-        addDebugLog(`분석 시작 오류: ${error.message || error.detail}`, 'error');
-        showNotification('분석 시작 중 오류: ' + (error.detail || error.message), 'error');
-        resetAnalysisButton();
-        startAnalysisBtn.disabled = false;
-        startAnalysisBtn.classList.remove('loading');
     });
 }
 
@@ -1076,18 +813,10 @@ function displayJobs(jobs) {
                         ${job.processed || 0}명 분석 완료 • ${createdDate}
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="button" onclick="viewResults('${job.job_id}')" 
-                            style="padding: 8px 16px; font-size: 0.9rem;"
-                            ${job.status !== 'completed' ? 'disabled' : ''}>
+                <div>
+                    <button class="button" onclick="viewResults('${job.job_id}')" style="padding: 8px 16px; font-size: 0.9rem;">
                         <i class="fas fa-chart-bar"></i> 결과 보기
                     </button>
-                    ${job.status === 'completed' ? `
-                        <button class="button secondary" onclick="showDownloadOptions('${job.job_id}')" 
-                                style="padding: 8px 16px; font-size: 0.9rem;">
-                            <i class="fas fa-download"></i> 다운로드
-                        </button>
-                    ` : ''}
                 </div>
             </div>
         `;
@@ -1096,261 +825,10 @@ function displayJobs(jobs) {
     container.innerHTML = html;
 }
 
-// 🔄 분석 상태 폴링
-async function pollAnalysisStatus(jobId) {
-    addDebugLog(`분석 상태 폴링 시작: ${jobId}`, 'info');
-    const maxAttempts = 300; // 최대 5분 (1초 간격)
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-        try {
-            const statusUrl = `/analysis/status/${jobId}`;
-            addDebugLog(`상태 확인 요청 #${attempts + 1}: ${statusUrl}`, 'info');
-            
-            const response = await fetch(statusUrl);
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                addDebugLog(`상태 확인 에러: ${JSON.stringify(errorData)}`, 'error');
-                throw new Error('상태 확인 실패');
-            }
-            
-            const status = await response.json();
-            addDebugLog(`상태 데이터: ${JSON.stringify(status)}`, 'info');
-            
-            // 진행률 업데이트
-            updateProgress(status.progress || 0, status.processed || 0, status.total || 0);
-            
-            if (status.status === 'completed') {
-                addDebugLog('분석 완료!', 'success');
-                showNotification('✅ 분석이 완료되었습니다!', 'success');
-                resetAnalysisButton();
-                loadRecentJobs();
-                
-                // 결과 표시
-                if (status.average_score) {
-                    showCompletionActions(jobId, status.average_score);
-                }
-                return;
-            } else if (status.status === 'failed') {
-                addDebugLog(`분석 실패: ${status.error}`, 'error');
-                throw new Error(status.error || '분석 실패');
-            }
-            
-            // 1초 대기 후 다시 확인
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-            
-        } catch (error) {
-            addDebugLog(`상태 확인 오류: ${error.message}`, 'error');
-            showNotification(`분석 오류: ${error.message}`, 'error');
-            resetAnalysisButton();
-            return;
-        }
-    }
-    
-    addDebugLog('분석 시간 초과', 'error');
-    showNotification('분석 시간이 초과되었습니다.', 'warning');
-    resetAnalysisButton();
-}
-
 function viewResults(jobId) {
-    addDebugLog(`결과 조회: ${jobId}`, 'info');
-    
-    // 결과 조회
-    fetch(`/analysis/results/${jobId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.results && data.results.length > 0) {
-                // 결과 데이터 저장
-                window.lastAnalysisResult = processResultsForChart(data.results);
-                
-                // 차트 표시
-                showResultsChart();
-                
-                // 다운로드 옵션 표시
-                showDownloadOptions(jobId);
-            } else {
-                showNotification('분석 결과가 없습니다.', 'warning');
-            }
-        })
-        .catch(error => {
-            addDebugLog(`결과 조회 오류: ${error.message}`, 'error');
-            showNotification('결과 조회 중 오류가 발생했습니다.', 'error');
-        });
-}
-
-
-
-// ============================================
-// 결과 다운로드 관련 함수들 (AIRISS v4.0 개선)
-// ============================================
-
-// 분석 결과 다운로드
-function downloadResults(jobId, format = 'excel') {
-    addDebugLog(`결과 다운로드 시작: ${jobId} (${format})`, 'info');
-    
-    const downloadBtn = event.target;
-    const originalText = downloadBtn.innerHTML;
-    downloadBtn.disabled = true;
-    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 다운로드 중...';
-    
-    fetch(`/analysis/download/${jobId}/${format}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`다운로드 실패: ${response.statusText}`);
-            }
-            
-            // 파일명 추출
-            const contentDisposition = response.headers.get('content-disposition');
-            let filename = `AIRISS_분석결과_${jobId}.${format === 'excel' ? 'xlsx' : format}`;
-            
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-                if (filenameMatch && filenameMatch[1]) {
-                    filename = filenameMatch[1].replace(/['"]/g, '');
-                }
-            }
-            
-            return response.blob().then(blob => ({ blob, filename }));
-        })
-        .then(({ blob, filename }) => {
-            // 다운로드 실행
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            addDebugLog(`다운로드 완료: ${filename}`, 'success');
-            showNotification(`분석 결과가 다운로드되었습니다: ${filename}`, 'success');
-        })
-        .catch(error => {
-            addDebugLog(`다운로드 오류: ${error.message}`, 'error');
-            showNotification(`다운로드 실패: ${error.message}`, 'error');
-        })
-        .finally(() => {
-            downloadBtn.disabled = false;
-            downloadBtn.innerHTML = originalText;
-        });
-}
-
-// 다운로드 형식 선택 모달
-function showDownloadOptions(jobId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header">
-                <h3><i class="fas fa-download"></i> 결과 다운로드</h3>
-                <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="modal-body">
-                <p style="margin-bottom: 20px;">분석 결과를 다운로드할 형식을 선택하세요.</p>
-                
-                <div class="download-options">
-                    <button class="download-option" onclick="downloadResults('${jobId}', 'excel'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-file-excel" style="font-size: 2rem; color: #1D6F42; margin-bottom: 10px;"></i>
-                        <div><strong>Excel 파일</strong></div>
-                        <div style="font-size: 0.85rem; color: #666;">요약 + 상세결과 (권장)</div>
-                    </button>
-                    
-                    <button class="download-option" onclick="downloadResults('${jobId}', 'csv'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-file-csv" style="font-size: 2rem; color: #FF9800; margin-bottom: 10px;"></i>
-                        <div><strong>CSV 파일</strong></div>
-                        <div style="font-size: 0.85rem; color: #666;">단순 데이터</div>
-                    </button>
-                    
-                    <button class="download-option" onclick="downloadResults('${jobId}', 'json'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-file-code" style="font-size: 2rem; color: #2196F3; margin-bottom: 10px;"></i>
-                        <div><strong>JSON 파일</strong></div>
-                        <div style="font-size: 0.85rem; color: #666;">개발자용</div>
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // CSS 추가
-    if (!document.getElementById('downloadOptionsStyle')) {
-        const style = document.createElement('style');
-        style.id = 'downloadOptionsStyle';
-        style.textContent = `
-            .download-options {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 15px;
-                margin-top: 20px;
-            }
-            
-            .download-option {
-                background: white;
-                border: 2px solid #e0e0e0;
-                border-radius: 12px;
-                padding: 20px 15px;
-                text-align: center;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .download-option:hover {
-                border-color: var(--primary-color);
-                transform: translateY(-3px);
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            }
-            
-            @media (max-width: 480px) {
-                .download-options {
-                    grid-template-columns: 1fr;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// 결과 데이터를 차트용으로 변환
-function processResultsForChart(results) {
-    // 8대 영역별 평균 점수 계산
-    const dimensions = [
-        '업무성과', 'KPI달성', '태도마인드셋', '커뮤니케이션역량', 
-        '리더십협업역량', '지식전문성', '라이프스타일건강', '윤리사외행동'
-    ];
-    
-    const scores = dimensions.map(dim => {
-        const dimResults = results.filter(r => r[`${dim}_점수`]);
-        if (dimResults.length > 0) {
-            const sum = dimResults.reduce((acc, r) => acc + (r[`${dim}_점수`] || 0), 0);
-            return Math.round(sum / dimResults.length);
-        }
-        return 75; // 기본값
-    });
-    
-    return {
-        labels: dimensions,
-        datasets: [{
-            label: '평균 점수',
-            data: scores,
-            backgroundColor: 'rgba(255, 87, 34, 0.2)',
-            borderColor: 'rgba(255, 87, 34, 1)',
-            borderWidth: 2,
-            pointBackgroundColor: 'rgba(255, 87, 34, 1)',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2,
-            pointRadius: 6
-        }]
-    };
+    addDebugLog(`결과 보기: ${jobId}`, 'info');
+    showNotification('결과 페이지로 이동합니다...', 'info');
+    window.open(`/docs#/analysis/get_analysis_results_analysis_results__job_id__get`, '_blank');
 }
 
 // 🛠️ 시스템 테스트

@@ -1,0 +1,334 @@
+name: 🚀 AIRISS CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.10'
+  NODE_VERSION: '18'
+
+jobs:
+  # ================================
+  # 백엔드 테스트
+  # ================================
+  backend-test:
+    name: 🐍 Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+          POSTGRES_DB: test_airiss
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: 🔧 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio
+
+    - name: 🧪 Run backend tests
+      env:
+        DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_airiss
+        REDIS_URL: redis://localhost:6379/0
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        SECRET_KEY: test_secret_key_for_ci
+      run: |
+        python -m pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  # ================================
+  # 프론트엔드 테스트
+  # ================================
+  frontend-test:
+    name: ⚛️ Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ⚛️ Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'airiss-v4-frontend/package-lock.json'
+
+    - name: 📦 Install frontend dependencies
+      working-directory: airiss-v4-frontend
+      run: npm ci
+
+    - name: 🔍 Run ESLint
+      working-directory: airiss-v4-frontend
+      run: npm run lint
+
+    - name: 🎨 Run Prettier check
+      working-directory: airiss-v4-frontend
+      run: npm run format:check
+
+    - name: 🧪 Run frontend tests
+      working-directory: airiss-v4-frontend
+      run: npm run test:ci
+
+    - name: 🏗️ Build frontend
+      working-directory: airiss-v4-frontend
+      run: npm run build
+
+  # ================================
+  # 보안 검사
+  # ================================
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: 📤 Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: 🐍 Python security check
+      run: |
+        python -m pip install safety bandit
+        safety check --json
+        bandit -r app/ -f json -o bandit-report.json || true
+
+  # ================================
+  # 코드 품질 검사
+  # ================================
+  code-quality:
+    name: ✨ Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 🔧 Install quality tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy
+
+    - name: 🎨 Check code formatting with Black
+      run: black --check app/
+
+    - name: 📦 Check import sorting with isort
+      run: isort --check-only app/
+
+    - name: 🔍 Run flake8 linting
+      run: flake8 app/
+
+    - name: 🏷️ Run mypy type checking
+      run: mypy app/ --ignore-missing-imports
+
+  # ================================
+  # Docker 빌드 테스트
+  # ================================
+  docker-build:
+    name: 🐳 Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🏗️ Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: airiss:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # ================================
+  # 통합 테스트
+  # ================================
+  integration-test:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 🔧 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🚀 Start services
+      run: |
+        # 백엔드 서버 시작 (백그라운드)
+        python run_server.py &
+        sleep 10
+
+    - name: 🧪 Run integration tests
+      run: |
+        python integration_test_v4.py
+
+  # ================================
+  # 배포 (main 브랜치만)
+  # ================================
+  deploy:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security-scan, code-quality, docker-build, integration-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    environment:
+      name: staging
+      url: https://airiss-staging.okfinancial.com
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📝 Create deployment summary
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Environment**: Staging" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+
+    # 실제 배포는 각 환경에 맞게 구현
+    - name: 🎯 Deploy placeholder
+      run: |
+        echo "배포 스크립트가 여기에 들어갑니다"
+        echo "예: kubectl apply -f k8s/"
+        echo "예: docker-compose up -d"
+
+  # ================================
+  # 성능 테스트
+  # ================================
+  performance-test:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 🔧 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust
+
+    - name: ⚡ Run performance tests
+      run: |
+        # Locust를 사용한 성능 테스트 예시
+        echo "성능 테스트 스크립트 실행"
+        # locust -f tests/performance/locustfile.py --headless -u 10 -r 2 -t 30s --host http://localhost:8002
+
+  # ================================
+  # 알림
+  # ================================
+  notify:
+    name: 📢 Notify Results
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security-scan, code-quality]
+    if: always()
+    
+    steps:
+    - name: 📊 Create status report
+      run: |
+        echo "## 🎯 Build Status Report" >> $GITHUB_STEP_SUMMARY
+        echo "- **Backend Tests**: ${{ needs.backend-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Frontend Tests**: ${{ needs.frontend-test.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Security Scan**: ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Code Quality**: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.backend-test.result }}" = "success" ] && [ "${{ needs.frontend-test.result }}" = "success" ]; then
+          echo "✅ **Overall Status**: PASSED" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Overall Status**: FAILED" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    # Slack 알림 (선택사항)
+    # - name: 📱 Slack Notification
+    #   uses: 8398a7/action-slack@v3
+    #   with:
+    #     status: ${{ job.status }}
+    #     channel: '#airiss-dev'
+    #     webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+    #   if: always()

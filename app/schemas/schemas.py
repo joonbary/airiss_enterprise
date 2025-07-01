@@ -19,7 +19,7 @@ class DataQuality(BaseModel):
 
 class FileUploadResponse(BaseModel):
     """파일 업로드 응답 스키마"""
-    id: str = Field(..., description="파일 고유 ID")
+    file_id: str = Field(..., description="파일 고유 ID")
     filename: str = Field(..., description="업로드된 파일명")
     total_records: int = Field(..., description="총 레코드 수")
     column_count: int = Field(..., description="컬럼 수")
@@ -36,7 +36,7 @@ class FileUploadResponse(BaseModel):
 
 class FileInfoResponse(BaseModel):
     """파일 정보 조회 응답 스키마"""
-    id: str = Field(..., description="파일 고유 ID")
+    file_id: str = Field(..., description="파일 고유 ID")
     filename: str = Field(..., description="파일명")
     total_records: int = Field(..., description="총 레코드 수")
     column_count: int = Field(..., description="컬럼 수")

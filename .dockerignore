@@ -1,0 +1,181 @@
+# AIRISS .dockerignore
+# Exclude files and directories from Docker build context
+
+# ================================
+# Version Control
+# ================================
+.git
+.gitignore
+.gitattributes
+.github/
+
+# ================================
+# Documentation
+# ================================
+*.md
+docs/
+README*
+CHANGELOG*
+LICENSE
+CONTRIBUTING*
+
+# ================================
+# Development & IDE
+# ================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+.mypy_cache/
+.tox/
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+ENV/
+
+# ================================
+# Node.js / Frontend
+# ================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# ================================
+# Logs & Temporary Files
+# ================================
+logs/
+*.log
+debug_logs/
+temp_data/
+uploads/
+backup*/
+*.backup
+*.bak
+
+# Database files
+*.db
+*.sqlite3
+postgres_data/
+
+# ================================
+# Testing
+# ================================
+test_results/
+coverage/
+htmlcov/
+.coverage
+tests/
+test_data/
+
+# ================================
+# Environment & Secrets
+# ================================
+.env
+.env.*
+secrets/
+*.pem
+*.key
+*.crt
+
+# ================================
+# OS Generated Files
+# ================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.Trash-*
+
+# ================================
+# Application Specific
+# ================================
+# Temporary upload files
+uploaded_files/
+temp_uploads/
+
+# Cache directories
+cache/
+.cache/
+
+# Generated files
+generated/
+auto_generated/
+
+# Performance monitoring
+monitoring/
+metrics/
+
+# Backup archives
+backup_archive/
+
+# Scripts that shouldn't be in container
+setup_*.py
+install_*.py
+deploy_*.py
+cleanup_*.py
+
+# Development utilities
+debug_*.py
+test_*.py
+check_*.py
+diagnostic_*.py
+
+# ================================
+# Exclude specific files
+# ================================
+# Development servers
+run_server.py
+run_server_alt.py
+simple_server.py
+
+# Development databases
+airiss.db
+test.db
+development.db
+
+# Configuration overrides
+config_local.*
+settings_local.*
+
+# IDE configurations
+.vscode/settings.json
+.idea/workspace.xml
+
+# ================================
+# Include necessary files
+# ================================
+# Force include important files
+!requirements.txt
+!requirements-dev.txt
+!app/
+!static/
+!templates/
+!alembic/
+!alembic.ini
+
+# Force include frontend build (if exists)
+!static/frontend/
