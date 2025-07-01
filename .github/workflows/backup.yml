@@ -1,0 +1,122 @@
+# AIRISS 자동 백업 워크플로우
+name: 🔄 AIRISS 자동 백업
+
+on:
+  schedule:
+    # 매일 오전 2시 (KST 11시)에 실행
+    - cron: '0 2 * * *'
+  workflow_dispatch: # 수동 실행 가능
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+jobs:
+  backup:
+    name: 📦 프로젝트 백업
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🔄 코드 체크아웃
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # 전체 히스토리 가져오기
+        
+    - name: 📅 날짜 설정
+      run: |
+        echo "BACKUP_DATE=$(date +'%Y-%m-%d_%H-%M')" >> $GITHUB_ENV
+        echo "YEAR_MONTH=$(date +'%Y-%m')" >> $GITHUB_ENV
+        
+    - name: 🗃️ 백업 아카이브 생성
+      run: |
+        # 백업 디렉토리 생성
+        mkdir -p backups/$YEAR_MONTH
+        
+        # 전체 프로젝트 압축 (중요 파일만)
+        tar -czf backups/$YEAR_MONTH/airiss_backup_$BACKUP_DATE.tar.gz \
+          --exclude='.git' \
+          --exclude='node_modules' \
+          --exclude='__pycache__' \
+          --exclude='venv' \
+          --exclude='*.pyc' \
+          --exclude='.env' \
+          --exclude='uploads' \
+          --exclude='logs' \
+          --exclude='temp_data' \
+          .
+          
+        # 데이터베이스 별도 백업
+        if [ -f "airiss.db" ]; then
+          cp airiss.db backups/$YEAR_MONTH/airiss_db_$BACKUP_DATE.db
+        fi
+        
+        # 백업 정보 파일 생성
+        cat > backups/$YEAR_MONTH/backup_info_$BACKUP_DATE.txt << EOF
+        AIRISS 백업 정보
+        =================
+        백업 일시: $(date +'%Y-%m-%d %H:%M:%S KST')
+        Git 커밋: $(git rev-parse HEAD)
+        브랜치: $(git branch --show-current)
+        백업 크기: $(du -h backups/$YEAR_MONTH/airiss_backup_$BACKUP_DATE.tar.gz | cut -f1)
+        
+        포함된 파일:
+        - 소스 코드 전체
+        - 설정 파일
+        - 데이터베이스 (airiss.db)
+        - 문서
+        
+        제외된 파일:
+        - .git 히스토리
+        - node_modules
+        - Python 캐시
+        - 로그 파일
+        - 임시 파일
+        EOF
+        
+    - name: 📤 백업 파일 업로드 (Artifacts)
+      uses: actions/upload-artifact@v4
+      with:
+        name: airiss-backup-${{ env.BACKUP_DATE }}
+        path: backups/
+        retention-days: 90 # 90일 보관
+        
+    - name: 📊 백업 완료 알림
+      run: |
+        echo "✅ AIRISS 백업 완료!"
+        echo "📅 백업 일시: $(date +'%Y-%m-%d %H:%M:%S')"
+        echo "📁 백업 파일: airiss_backup_$BACKUP_DATE.tar.gz"
+        echo "💾 데이터베이스: airiss_db_$BACKUP_DATE.db"
+        
+  # 오래된 백업 정리 (선택사항)
+  cleanup-old-backups:
+    name: 🧹 오래된 백업 정리
+    runs-on: ubuntu-latest
+    needs: backup
+    if: github.event_name == 'schedule' # 스케줄 실행시만
+    
+    steps:
+    - name: 🗑️ 30일 이상 된 아티팩트 삭제
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - 30);
+          
+          const artifacts = await github.rest.actions.listArtifactsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 100
+          });
+          
+          for (const artifact of artifacts.data.artifacts) {
+            if (artifact.name.startsWith('airiss-backup-') && 
+                new Date(artifact.created_at) < cutoffDate) {
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id
+              });
+              console.log(`삭제됨: ${artifact.name}`);
+            }
+          }
