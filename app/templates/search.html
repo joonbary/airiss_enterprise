@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRISS v4.1 - 고급 검색</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* 헤더 */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 검색 영역 */
+        .search-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .search-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .search-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* 자동완성 */
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .autocomplete-suggestion {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .autocomplete-suggestion:hover {
+            background: #f8f9fa;
+        }
+
+        /* 검색 결과 */
+        .results-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-info {
+            color: #666;
+        }
+
+        .results-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* 테이블 */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* 점수 표시 */
+        .score-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .score-excellent { background: #d1fae5; color: #065f46; }
+        .score-good { background: #dbeafe; color: #1e3a8a; }
+        .score-average { background: #fef3c7; color: #92400e; }
+        .score-poor { background: #fee2e2; color: #991b1b; }
+
+        /* 등급 표시 */
+        .grade-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .grade-ok3 { background: #ffd700; color: #000; }
+        .grade-ok2 { background: #c0c0c0; color: #000; }
+        .grade-ok1 { background: #cd7f32; color: #fff; }
+
+        /* 즐겨찾기 */
+        .favorite-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .favorite-btn.active {
+            color: #fbbf24;
+        }
+
+        .favorite-btn:hover {
+            transform: scale(1.2);
+        }
+
+        /* 페이징 */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .pagination button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            position: fixed;
+            right: -350px;
+            top: 0;
+            width: 350px;
+            height: 100vh;
+            background: white;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar.open {
+            right: 0;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+        }
+
+        .sidebar-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        /* 모달 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* 로딩 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .search-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-table {
+                font-size: 12px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                right: -100%;
+            }
+        }
+
+        /* 애니메이션 */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background: var(--success-color);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 3000;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <div class="header">
+            <h1>
+                🔍 AIRISS 고급 검색
+            </h1>
+            <div class="nav-buttons">
+                <a href="/" class="btn btn-secondary">🏠 메인</a>
+                <a href="/dashboard" class="btn btn-secondary">📊 대시보드</a>
+                <button class="btn btn-primary" onclick="openFavorites()">⭐ 즐겨찾기</button>
+            </div>
+        </div>
+
+        <!-- 검색 영역 -->
+        <div class="search-container">
+            <div class="search-header">
+                <h2>🎯 직원 성과 검색</h2>
+            </div>
+
+            <!-- 검색 탭 -->
+            <div class="search-tabs">
+                <button class="tab active" onclick="setSearchMode('basic')">기본 검색</button>
+                <button class="tab" onclick="setSearchMode('advanced')">고급 검색</button>
+                <button class="tab" onclick="setSearchMode('compare')">직원 비교</button>
+            </div>
+
+            <!-- 기본 검색 폼 -->
+            <div id="basicSearch" class="search-form">
+                <div class="form-group">
+                    <label for="quickSearch">통합 검색</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="quickSearch" class="form-control" 
+                               placeholder="직원 ID, 이름, 부서 검색..." 
+                               oninput="handleAutocomplete(this)">
+                        <div id="quickSearchSuggestions" class="autocomplete-suggestions"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gradeFilter">등급</label>
+                    <select id="gradeFilter" class="form-control">
+                        <option value="">모든 등급</option>
+                        <option value="OK★★★">OK★★★ (최우수)</option>
+                        <option value="OK★★">OK★★ (우수)</option>
+                        <option value="OK★">OK★ (양호)</option>
+                        <option value="OK A">OK A (보통)</option>
+                        <option value="OK B+">OK B+ (개선필요)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="scoreRange">점수 범위</label>
+                    <input type="range" id="scoreRange" class="form-control" 
+                           min="0" max="100" value="0" 
+                           oninput="updateScoreRange(this.value)">
+                    <small id="scoreRangeText">0점 이상</small>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="performSearch()" style="margin-top: 32px;">
+                        🔍 검색
+                    </button>
+                </div>
+            </div>
+
+            <!-- 고급 검색 폼 (숨김) -->
+            <div id="advancedSearch" class="search-form" style="display: none;">
+                <div class="form-group">
+                    <label for="uidSearch">직원 ID</label>
+                    <input type="text" id="uidSearch" class="form-control" placeholder="EMP001">
+                </div>
+                
+                <div class="form-group">
+                    <label for="departmentFilter">부서</label>
+                    <input type="text" id="departmentFilter" class="form-control" placeholder="부서명 입력">
+                </div>
+
+                <div class="form-group">
+                    <label for="scoreMin">최소 점수</label>
+                    <input type="number" id="scoreMin" class="form-control" min="0" max="100" placeholder="60">
+                </div>
+
+                <div class="form-group">
+                    <label for="scoreMax">최대 점수</label>
+                    <input type="number" id="scoreMax" class="form-control" min="0" max="100" placeholder="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="dateFrom">분석 시작일</label>
+                    <input type="date" id="dateFrom" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="dateTo">분석 종료일</label>
+                    <input type="date" id="dateTo" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="sortBy">정렬 기준</label>
+                    <select id="sortBy" class="form-control">
+                        <option value="score">점수순</option>
+                        <option value="date">날짜순</option>
+                        <option value="name">이름순</option>
+                        <option value="grade">등급순</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="performAdvancedSearch()" style="margin-top: 32px;">
+                        🔍 고급 검색
+                    </button>
+                </div>
+            </div>
+
+            <!-- 직원 비교 폼 (숨김) -->
+            <div id="compareSearch" class="search-form" style="display: none;">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="compareUids">비교할 직원 ID (최대 10명, 쉼표로 구분)</label>
+                    <textarea id="compareUids" class="form-control" rows="3" 
+                              placeholder="EMP001, EMP002, EMP003..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <button class="btn btn-primary" onclick="performCompare()" style="margin-top: 32px;">
+                        🔄 직원 비교
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 검색 결과 -->
+        <div id="resultsContainer" class="results-container" style="display: none;">
+            <div class="results-header">
+                <div class="results-info">
+                    <span id="resultsCount">0개 결과</span>
+                    <span id="searchTime"></span>
+                </div>
+                <div class="results-controls">
+                    <button class="btn btn-secondary" onclick="exportResults()">📥 내보내기</button>
+                    <button class="btn btn-secondary" onclick="clearResults()">🗑️ 지우기</button>
+                </div>
+            </div>
+
+            <div id="resultsTable"></div>
+            
+            <div id="pagination" class="pagination"></div>
+        </div>
+
+        <!-- 로딩 표시 -->
+        <div id="loadingContainer" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>검색 중입니다...</p>
+        </div>
+    </div>
+
+    <!-- 즐겨찾기 사이드바 -->
+    <div id="favoritesSidebar" class="sidebar">
+        <button class="sidebar-close" onclick="closeFavorites()">×</button>
+        <div class="sidebar-content">
+            <h3>⭐ 즐겨찾기</h3>
+            <div id="favoritesContent">
+                <p>즐겨찾기가 없습니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 직원 상세 모달 -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <button class="sidebar-close" onclick="closeEmployeeModal()">×</button>
+            <div id="employeeDetails"></div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let currentPage = 1;
+        let currentSearchMode = 'basic';
+        let searchResults = [];
+        let favorites = [];
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFavorites();
+            setupEventListeners();
+        });
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // Enter 키 검색
+            document.getElementById('quickSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // 모달 외부 클릭시 닫기
+            document.getElementById('employeeModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeEmployeeModal();
+                }
+            });
+        }
+
+        // 검색 모드 변경
+        function setSearchMode(mode) {
+            currentSearchMode = mode;
+            
+            // 탭 활성화
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 폼 표시/숨김
+            document.getElementById('basicSearch').style.display = mode === 'basic' ? 'grid' : 'none';
+            document.getElementById('advancedSearch').style.display = mode === 'advanced' ? 'grid' : 'none';
+            document.getElementById('compareSearch').style.display = mode === 'compare' ? 'grid' : 'none';
+        }
+
+        // 점수 범위 업데이트
+        function updateScoreRange(value) {
+            document.getElementById('scoreRangeText').textContent = `${value}점 이상`;
+        }
+
+        // 자동완성 처리
+        async function handleAutocomplete(input) {
+            const query = input.value.trim();
+            if (query.length < 2) {
+                hideAutocomplete();
+                return;
+            }
+
+            try {
+                const response = await fetch('/search/autocomplete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        field: 'uid',
+                        limit: 5
+                    })
+                });
+
+                const data = await response.json();
+                showAutocomplete(data.suggestions, input);
+            } catch (error) {
+                console.error('자동완성 오류:', error);
+            }
+        }
+
+        // 자동완성 표시
+        function showAutocomplete(suggestions, input) {
+            const container = input.parentNode.querySelector('.autocomplete-suggestions');
+            container.innerHTML = '';
+
+            if (suggestions.length === 0) {
+                hideAutocomplete();
+                return;
+            }
+
+            suggestions.forEach(suggestion => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-suggestion';
+                item.textContent = suggestion;
+                item.onclick = () => {
+                    input.value = suggestion;
+                    hideAutocomplete();
+                };
+                container.appendChild(item);
+            });
+
+            container.style.display = 'block';
+        }
+
+        // 자동완성 숨김
+        function hideAutocomplete() {
+            document.querySelectorAll('.autocomplete-suggestions').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
+        // 기본 검색
+        async function performSearch() {
+            const searchData = {
+                query: document.getElementById('quickSearch').value,
+                grade: document.getElementById('gradeFilter').value,
+                score_min: parseInt(document.getElementById('scoreRange').value),
+                page: currentPage,
+                page_size: 20,
+                include_details: false
+            };
+
+            await executeSearch(searchData);
+        }
+
+        // 고급 검색
+        async function performAdvancedSearch() {
+            const searchData = {
+                uid: document.getElementById('uidSearch').value,
+                department: document.getElementById('departmentFilter').value,
+                score_min: document.getElementById('scoreMin').value ? parseInt(document.getElementById('scoreMin').value) : null,
+                score_max: document.getElementById('scoreMax').value ? parseInt(document.getElementById('scoreMax').value) : null,
+                date_from: document.getElementById('dateFrom').value,
+                date_to: document.getElementById('dateTo').value,
+                sort_by: document.getElementById('sortBy').value,
+                page: currentPage,
+                page_size: 20,
+                include_details: true
+            };
+
+            await executeSearch(searchData);
+        }
+
+        // 검색 실행
+        async function executeSearch(searchData) {
+            showLoading();
+            hideResults();
+
+            try {
+                const startTime = performance.now();
+                
+                const response = await fetch('/search/results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(searchData)
+                });
+
+                const data = await response.json();
+                const endTime = performance.now();
+
+                if (response.ok) {
+                    searchResults = data.results;
+                    displayResults(data);
+                    
+                    const searchTime = ((endTime - startTime) / 1000).toFixed(2);
+                    document.getElementById('searchTime').textContent = `(${searchTime}초)`;
+                    
+                    showToast('검색이 완료되었습니다!', 'success');
+                } else {
+                    showToast('검색 중 오류가 발생했습니다: ' + data.detail, 'error');
+                }
+            } catch (error) {
+                console.error('검색 오류:', error);
+                showToast('검색 요청 실패', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 검색 결과 표시
+        function displayResults(data) {
+            document.getElementById('resultsCount').textContent = `${data.pagination.total_count}개 결과`;
+            
+            if (data.results.length === 0) {
+                document.getElementById('resultsTable').innerHTML = 
+                    '<div class="loading"><p>검색 결과가 없습니다.</p></div>';
+                showResults();
+                return;
+            }
+
+            // 테이블 생성
+            let tableHTML = `
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>즐겨찾기</th>
+                            <th>직원 ID</th>
+                            <th>종합 점수</th>
+                            <th>등급</th>
+                            <th>분석일</th>
+                            <th>신뢰도</th>
+                            <th>상세</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.results.forEach(result => {
+                const isFavorite = favorites.includes(result.uid);
+                const scoreClass = getScoreClass(result.score);
+                const gradeClass = getGradeClass(result.grade);
+
+                tableHTML += `
+                    <tr>
+                        <td>
+                            <button class="favorite-btn ${isFavorite ? 'active' : ''}" 
+                                    onclick="toggleFavorite('${result.uid}')">
+                                ${isFavorite ? '⭐' : '☆'}
+                            </button>
+                        </td>
+                        <td><strong>${result.uid}</strong></td>
+                        <td>
+                            <span class="score-badge ${scoreClass}">
+                                ${result.score.toFixed(1)}점
+                            </span>
+                        </td>
+                        <td>
+                            <span class="grade-badge ${gradeClass}">
+                                ${result.grade}
+                            </span>
+                        </td>
+                        <td>${new Date(result.analysis_date).toLocaleDateString('ko-KR')}</td>
+                        <td>${(result.confidence * 100).toFixed(1)}%</td>
+                        <td>
+                            <button class="btn btn-primary" onclick="viewEmployeeDetails('${result.uid}')">
+                                👁️ 보기
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += '</tbody></table>';
+            document.getElementById('resultsTable').innerHTML = tableHTML;
+
+            // 페이징 생성
+            createPagination(data.pagination);
+            
+            showResults();
+        }
+
+        // 점수 클래스 반환
+        function getScoreClass(score) {
+            if (score >= 90) return 'score-excellent';
+            if (score >= 80) return 'score-good';
+            if (score >= 70) return 'score-average';
+            return 'score-poor';
+        }
+
+        // 등급 클래스 반환
+        function getGradeClass(grade) {
+            if (grade.includes('★★★')) return 'grade-ok3';
+            if (grade.includes('★★')) return 'grade-ok2';
+            if (grade.includes('★')) return 'grade-ok1';
+            return 'grade-ok1';
+        }
+
+        // 페이징 생성
+        function createPagination(pagination) {
+            const totalPages = pagination.total_pages;
+            const currentPage = pagination.page;
+            
+            let paginationHTML = '';
+            
+            // 이전 버튼
+            paginationHTML += `
+                <button onclick="changePage(${currentPage - 1})" 
+                        ${currentPage === 1 ? 'disabled' : ''}>
+                    ← 이전
+                </button>
+            `;
+            
+            // 페이지 번호
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationHTML += `
+                    <button onclick="changePage(${i})" 
+                            ${i === currentPage ? 'class="active"' : ''}>
+                        ${i}
+                    </button>
+                `;
+            }
+            
+            // 다음 버튼
+            paginationHTML += `
+                <button onclick="changePage(${currentPage + 1})" 
+                        ${currentPage === totalPages ? 'disabled' : ''}>
+                    다음 →
+                </button>
+            `;
+            
+            document.getElementById('pagination').innerHTML = paginationHTML;
+        }
+
+        // 페이지 변경
+        function changePage(page) {
+            currentPage = page;
+            if (currentSearchMode === 'basic') {
+                performSearch();
+            } else {
+                performAdvancedSearch();
+            }
+        }
+
+        // 직원 비교
+        async function performCompare() {
+            const uidsText = document.getElementById('compareUids').value;
+            const uids = uidsText.split(',').map(uid => uid.trim()).filter(uid => uid);
+            
+            if (uids.length < 2) {
+                showToast('비교를 위해서는 최소 2명의 직원 ID가 필요합니다.', 'warning');
+                return;
+            }
+            
+            if (uids.length > 10) {
+                showToast('한 번에 최대 10명까지만 비교할 수 있습니다.', 'warning');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/search/compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uids: uids })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    displayCompareResults(data);
+                    showToast('비교 분석이 완료되었습니다!', 'success');
+                } else {
+                    showToast('비교 분석 중 오류가 발생했습니다: ' + data.detail, 'error');
+                }
+            } catch (error) {
+                console.error('비교 분석 오류:', error);
+                showToast('비교 분석 요청 실패', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 비교 결과 표시
+        function displayCompareResults(data) {
+            document.getElementById('resultsCount').textContent = `${data.employees.length}명 비교 결과`;
+            
+            let compareHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3>📊 직원 비교 분석</h3>
+                    <p><strong>최고 성과자:</strong> ${data.comparison_analysis.overall_comparison.highest_performer.uid} 
+                       (${data.comparison_analysis.overall_comparison.highest_performer.score}점)</p>
+                    <p><strong>평균 점수:</strong> ${data.comparison_analysis.overall_comparison.average_score}점</p>
+                </div>
+                
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>직원 ID</th>
+                            <th>종합 점수</th>
+                            <th>등급</th>
+                            <th>업무성과</th>
+                            <th>리더십협업</th>
+                            <th>커뮤니케이션</th>
+                            <th>전문성학습</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.employees.forEach(emp => {
+                const scoreClass = getScoreClass(emp.overall_score);
+                const gradeClass = getGradeClass(emp.grade);
+
+                compareHTML += `
+                    <tr>
+                        <td><strong>${emp.uid}</strong></td>
+                        <td>
+                            <span class="score-badge ${scoreClass}">
+                                ${emp.overall_score.toFixed(1)}점
+                            </span>
+                        </td>
+                        <td>
+                            <span class="grade-badge ${gradeClass}">
+                                ${emp.grade}
+                            </span>
+                        </td>
+                        <td>${emp.dimension_scores.업무성과}점</td>
+                        <td>${emp.dimension_scores.리더십협업}점</td>
+                        <td>${emp.dimension_scores.커뮤니케이션}점</td>
+                        <td>${emp.dimension_scores.전문성학습}점</td>
+                    </tr>
+                `;
+            });
+
+            compareHTML += '</tbody></table>';
+            
+            // 인사이트 추가
+            if (data.comparison_analysis.insights.length > 0) {
+                compareHTML += `
+                    <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>💡 분석 인사이트</h4>
+                        <ul>
+                `;
+                
+                data.comparison_analysis.insights.forEach(insight => {
+                    compareHTML += `<li>${insight}</li>`;
+                });
+                
+                compareHTML += '</ul></div>';
+            }
+
+            document.getElementById('resultsTable').innerHTML = compareHTML;
+            document.getElementById('pagination').innerHTML = '';
+            
+            showResults();
+        }
+
+        // 즐겨찾기 토글
+        async function toggleFavorite(uid) {
+            try {
+                const isFavorite = favorites.includes(uid);
+                
+                if (isFavorite) {
+                    const response = await fetch(`/search/favorites/remove/${uid}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        favorites = favorites.filter(fav => fav !== uid);
+                        showToast('즐겨찾기에서 제거되었습니다.', 'success');
+                    }
+                } else {
+                    const response = await fetch('/search/favorites/add', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ uid: uid })
+                    });
+                    
+                    if (response.ok) {
+                        favorites.push(uid);
+                        showToast('즐겨찾기에 추가되었습니다.', 'success');
+                    }
+                }
+                
+                updateFavoriteButtons();
+                loadFavorites();
+                
+            } catch (error) {
+                console.error('즐겨찾기 오류:', error);
+                showToast('즐겨찾기 처리 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // 즐겨찾기 버튼 업데이트
+        function updateFavoriteButtons() {
+            document.querySelectorAll('.favorite-btn').forEach(btn => {
+                const uid = btn.getAttribute('onclick').match(/'([^']+)'/)[1];
+                const isFavorite = favorites.includes(uid);
+                btn.className = `favorite-btn ${isFavorite ? 'active' : ''}`;
+                btn.textContent = isFavorite ? '⭐' : '☆';
+            });
+        }
+
+        // 즐겨찾기 로드
+        async function loadFavorites() {
+            try {
+                const response = await fetch('/search/favorites');
+                const data = await response.json();
+                
+                favorites = data.favorites.map(fav => fav.uid);
+                updateFavoritesContent(data.favorites);
+                
+            } catch (error) {
+                console.error('즐겨찾기 로드 오류:', error);
+            }
+        }
+
+        // 즐겨찾기 콘텐츠 업데이트
+        function updateFavoritesContent(favoritesData) {
+            const container = document.getElementById('favoritesContent');
+            
+            if (favoritesData.length === 0) {
+                container.innerHTML = '<p>즐겨찾기가 없습니다.</p>';
+                return;
+            }
+            
+            let favHTML = '';
+            favoritesData.forEach(fav => {
+                favHTML += `
+                    <div style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong>${fav.uid}</strong>
+                            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;"
+                                    onclick="viewEmployeeDetails('${fav.uid}')">
+                                보기
+                            </button>
+                        </div>
+                        ${fav.note ? `<small style="color: #666;">${fav.note}</small>` : ''}
+                        <div style="margin-top: 5px;">
+                            <small style="color: #999;">
+                                ${new Date(fav.added_at).toLocaleDateString('ko-KR')} 추가
+                            </small>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = favHTML;
+        }
+
+        // 직원 상세 보기
+        async function viewEmployeeDetails(uid) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`/search/employee/${uid}?include_details=true`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayEmployeeDetails(data);
+                } else {
+                    showToast('직원 정보를 불러올 수 없습니다: ' + data.detail, 'error');
+                }
+            } catch (error) {
+                console.error('직원 상세 정보 오류:', error);
+                showToast('직원 정보 요청 실패', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 직원 상세 정보 표시
+        function displayEmployeeDetails(data) {
+            const employee = data.history[0]; // 최신 분석 결과
+            
+            let detailsHTML = `
+                <h2>👤 직원 상세 정보: ${data.uid}</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
+                    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">
+                            ${employee.score.toFixed(1)}점
+                        </div>
+                        <div>종합 점수</div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <div style="font-size: 1.5rem; font-weight: bold;">
+                            ${employee.grade}
+                        </div>
+                        <div>등급</div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                        <div style="font-size: 1.5rem; font-weight: bold;">
+                            ${(employee.confidence * 100).toFixed(1)}%
+                        </div>
+                        <div>신뢰도</div>
+                    </div>
+                </div>
+                
+                <h3>📈 성과 추이</h3>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            `;
+            
+            if (data.trend_analysis.analysis_count > 1) {
+                detailsHTML += `
+                    <p><strong>최신 점수:</strong> ${data.trend_analysis.latest_score}점</p>
+                    <p><strong>이전 점수:</strong> ${data.trend_analysis.previous_score}점</p>
+                    <p><strong>변화:</strong> 
+                        <span style="color: ${data.trend_analysis.score_change >= 0 ? 'green' : 'red'};">
+                            ${data.trend_analysis.score_change > 0 ? '+' : ''}${data.trend_analysis.score_change}점 
+                            (${data.trend_analysis.trend})
+                        </span>
+                    </p>
+                    <p><strong>최고 점수:</strong> ${data.trend_analysis.highest_score}점</p>
+                    <p><strong>평균 점수:</strong> ${data.trend_analysis.average_score}점</p>
+                `;
+            } else {
+                detailsHTML += '<p>첫 번째 분석 결과입니다.</p>';
+            }
+            
+            detailsHTML += `</div>`;
+            
+            // 분석 히스토리
+            detailsHTML += `
+                <h3>📋 분석 히스토리</h3>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>분석일</th>
+                                <th>점수</th>
+                                <th>등급</th>
+                                <th>신뢰도</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.history.forEach(record => {
+                detailsHTML += `
+                    <tr>
+                        <td>${new Date(record.analysis_date).toLocaleDateString('ko-KR')}</td>
+                        <td>${record.score.toFixed(1)}점</td>
+                        <td>${record.grade}</td>
+                        <td>${(record.confidence * 100).toFixed(1)}%</td>
+                    </tr>
+                `;
+            });
+            
+            detailsHTML += '</tbody></table></div>';
+            
+            document.getElementById('employeeDetails').innerHTML = detailsHTML;
+            document.getElementById('employeeModal').style.display = 'block';
+        }
+
+        // UI 제어 함수들
+        function showLoading() {
+            document.getElementById('loadingContainer').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingContainer').style.display = 'none';
+        }
+
+        function showResults() {
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('resultsContainer').classList.add('fade-in');
+        }
+
+        function hideResults() {
+            document.getElementById('resultsContainer').style.display = 'none';
+        }
+
+        function clearResults() {
+            hideResults();
+            searchResults = [];
+            currentPage = 1;
+        }
+
+        function openFavorites() {
+            document.getElementById('favoritesSidebar').classList.add('open');
+        }
+
+        function closeFavorites() {
+            document.getElementById('favoritesSidebar').classList.remove('open');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').style.display = 'none';
+        }
+
+        function exportResults() {
+            if (searchResults.length === 0) {
+                showToast('내보낼 결과가 없습니다.', 'warning');
+                return;
+            }
+            
+            // CSV 생성
+            const headers = ['직원ID', '점수', '등급', '분석일', '신뢰도'];
+            const csvContent = [headers.join(',')];
+            
+            searchResults.forEach(result => {
+                const row = [
+                    result.uid,
+                    result.score,
+                    result.grade,
+                    new Date(result.analysis_date).toLocaleDateString('ko-KR'),
+                    (result.confidence * 100).toFixed(1) + '%'
+                ];
+                csvContent.push(row.join(','));
+            });
+            
+            const blob = new Blob([csvContent.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `AIRISS_검색결과_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+            
+            showToast('검색 결과가 CSV 파일로 내보내졌습니다.', 'success');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'success' ? var(--success-color) : 
+                                   type === 'warning' ? var(--warning-color) : 
+                                   var(--error-color);
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // 외부 클릭 시 자동완성 숨김
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.autocomplete-container')) {
+                hideAutocomplete();
+            }
+        });
+    </script>
+</body>
+</html>

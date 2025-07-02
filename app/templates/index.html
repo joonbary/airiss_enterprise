@@ -55,6 +55,50 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 20px;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .nav-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .nav-button.search {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-color: var(--primary-color);
+        }
+        
+        .nav-button.search:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.4);
+        }
+        
+        .nav-button i {
+            font-size: 1.1rem;
         }
         
         .logo {
@@ -646,9 +690,35 @@
                 text-align: center;
             }
             
-            .status-info {
+            .nav-menu {
+                order: 2;
                 justify-content: center;
                 flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .nav-button {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .nav-button span {
+                display: none;
+            }
+            
+            .nav-button i {
+                font-size: 1.2rem;
+            }
+            
+            .status-info {
+                order: 3;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            .status-item {
+                font-size: 0.75rem;
+                padding: 6px 10px;
             }
             
             .container {
@@ -666,6 +736,20 @@
             .insights-grid,
             .prediction-grid {
                 grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo h1 {
+                font-size: 1.4rem;
+            }
+            
+            .logo .subtitle {
+                font-size: 0.8rem;
+            }
+            
+            .nav-button {
+                padding: 6px 10px;
             }
         }
         
@@ -728,6 +812,23 @@
                     <div class="subtitle">OK금융그룹 AI 기반 인재 분석 시스템</div>
                 </div>
             </div>
+            
+            <!-- 네비게이션 메뉴 -->
+            <div class="nav-menu">
+                <a href="/search" class="nav-button search">
+                    <i class="fas fa-search"></i>
+                    <span>고급 검색</span>
+                </a>
+                <a href="/dashboard" class="nav-button">
+                    <i class="fas fa-chart-line"></i>
+                    <span>대시보드</span>
+                </a>
+                <a href="/docs" class="nav-button" target="_blank">
+                    <i class="fas fa-book"></i>
+                    <span>API 문서</span>
+                </a>
+            </div>
+            
             <div class="status-info">
                 <div class="status-item">
                     <i class="fas fa-database"></i>
@@ -907,6 +1008,88 @@
     </div>
 
     <script src="/static/js/airiss-main.js"></script>
+    
+    <!-- 네비게이션 강화 스크립트 -->
+    <script>
+        // 현재 페이지 강조
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const navButtons = document.querySelectorAll('.nav-button');
+            
+            navButtons.forEach(button => {
+                if (button.getAttribute('href') === currentPath) {
+                    button.style.background = 'rgba(255, 255, 255, 0.3)';
+                    button.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                }
+            });
+        });
+        
+        // 키보드 단축키
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + K 또는 Cmd + K로 검색 페이지로 이동
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                window.location.href = '/search';
+            }
+            
+            // Ctrl + D 또는 Cmd + D로 대시보드로 이동
+            if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+                e.preventDefault();
+                window.location.href = '/dashboard';
+            }
+        });
+        
+        // 네비게이션 버튼 클릭 애니메이션
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                // 링크 클릭 시 짧은 프레스 애니메이션
+                this.style.transform = 'translateY(1px)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+        
+        // 알림 표시 함수
+        function showNotification(message, type = 'info', duration = 3000) {
+            const notification = document.getElementById('notification');
+            const icon = document.getElementById('notificationIcon');
+            const text = document.getElementById('notificationText');
+            
+            // 아이콘 설정
+            const icons = {
+                success: 'fas fa-check-circle',
+                error: 'fas fa-exclamation-circle',
+                warning: 'fas fa-exclamation-triangle',
+                info: 'fas fa-info-circle'
+            };
+            
+            icon.className = icons[type] || icons.info;
+            text.textContent = message;
+            
+            // 클래스 설정
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            // 자동 숨김
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+        
+        // 네비게이션 탤킴 표시
+        function showNavigationHelp() {
+            showNotification('키보드 단축키: Ctrl+K (검색), Ctrl+D (대시보드)', 'info', 3000);
+        }
+        
+        // 페이지 로드 시 단축키 안내 표시 (선택적)
+        setTimeout(() => {
+            if (localStorage.getItem('airiss_nav_help_shown') !== 'true') {
+                showNavigationHelp();
+                localStorage.setItem('airiss_nav_help_shown', 'true');
+            }
+        }, 3000);
+    </script>
 <!-- 분석 설정 모달 -->
 <div id="analysisSettingsModal" class="modal-overlay" style="display: none;">
     <div class="modal-content">

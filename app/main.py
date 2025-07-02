@@ -230,6 +230,16 @@ async def developer_dashboard():
     
     return HTMLResponse(content=dashboard_html)
 
+# 🔍 검색 페이지 (새로 추가)
+@app.get("/search", response_class=HTMLResponse)
+async def search_page(request: Request):
+    """AIRISS v4.1 고급 검색 페이지"""
+    return templates.TemplateResponse("search.html", {
+        "request": request,
+        "ws_host": WS_HOST,
+        "server_port": SERVER_PORT
+    })
+
 # 라우터 등록
 logger.info("🔧 Enhanced 라우터 등록...")
 
@@ -248,6 +258,22 @@ try:
     logger.info("✅ Analysis router registered")
 except Exception as e:
     logger.error(f"❌ Analysis router error: {e}")
+
+# 🔍 검색 라우터 등록 (init_search_services 호출 제거)
+try:
+    from app.api.search import router as search_router
+    app.include_router(search_router)
+    logger.info("✅ Search router registered (/search)")
+except Exception as e:
+    logger.error(f"❌ Search router error: {e}")
+
+# 🔍 올바른 테이블명 검색 라우터 등록 (NEW - 패치됨)
+try:
+    from app.api.search_fixed import router as search_fixed_router
+    app.include_router(search_fixed_router)
+    logger.info("✅ Search Fixed router registered (/search-fixed)")
+except Exception as e:
+    logger.error(f"❌ Search Fixed router error: {e}")
 
 # 🔧 FIXED: Employee API 직접 등록 (404 에러 해결)
 try:

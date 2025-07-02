@@ -1,4 +1,4 @@
-# 🤖 AIRISS v4.1 Enhanced
+# 🤖 AIRISS v4.1 Enhanced - OK금융그룹 AI 인재분석시스템
 ## AI-powered Resource Intelligence Scoring System
 
 > **"인재의 정량화(Quantifying Talent)"** - OK금융그룹 AI 혁신 대표 프로젝트
