@@ -1,0 +1,30 @@
+option_settings:
+  aws:elasticbeanstalk:container:python:
+    WSGIPath: application:application
+  aws:elasticbeanstalk:application:environment:
+    PYTHONPATH: "/var/app/current:$PYTHONPATH"
+    ENVIRONMENT: "production"
+    DEBUG: "false"
+    # AIRISS 특화 환경변수
+    AIRISS_MODEL_PATH: "/var/app/current/models"
+    MAX_WORKERS: "2"
+    DB_PATH: "/var/app/current/database/airiss.db"
+  aws:autoscaling:launchconfiguration:
+    # AI 모델 실행을 위한 더 큰 인스턴스 (메모리 2GB → 8GB)
+    InstanceType: t3.large
+    IamInstanceProfile: aws-elasticbeanstalk-ec2-role
+  aws:autoscaling:asg:
+    MinSize: 1
+    MaxSize: 2
+  aws:elasticbeanstalk:healthreporting:system:
+    SystemType: enhanced
+  aws:elasticbeanstalk:cloudwatch:logs:
+    StreamLogs: true
+    DeleteOnTerminate: false
+    RetentionInDays: 14
+  # FastAPI용 ASGI 설정
+  aws:elasticbeanstalk:container:python:staticfiles:
+    /static: static
+  # 메모리 및 타임아웃 증가 (AI 모델 로딩용)
+  aws:elasticbeanstalk:command:
+    Timeout: 600

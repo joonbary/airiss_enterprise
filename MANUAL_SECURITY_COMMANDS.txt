@@ -1,0 +1,42 @@
+# ==================================================
+# MANUAL SECURITY FIX COMMANDS
+# Copy and paste these commands ONE BY ONE
+# ==================================================
+
+# 1. Open Command Prompt (Windows + R, type "cmd", press Enter)
+
+# 2. Navigate to project directory
+cd "C:\Users\apro\OneDrive\Desktop\AIRISS\airiss_v4"
+
+# 3. Check current directory (should show the AIRISS folder)
+dir
+
+# 4. Delete the sensitive file
+del rootkey.csv
+
+# 5. Check git status
+git status
+
+# 6. Add all files to git staging
+git add .
+
+# 7. Create security commit
+git commit -m "SECURITY: Remove AWS credentials and fix CI pipeline"
+
+# 8. Try to push to GitHub
+git push origin main
+
+# 9. If step 8 fails with security error, try this alternative:
+git checkout -b emergency-security-fix
+git push origin emergency-security-fix
+
+# 10. If you used step 9, go to GitHub website and create a Pull Request:
+#     https://github.com/joonbary/airiss_enterprise/compare/emergency-security-fix
+
+# ==================================================
+# CRITICAL: After running these commands, immediately:
+# 1. Go to AWS Console
+# 2. IAM > Access Keys  
+# 3. Find key: AKIAWKOET5F6MUFGBL2C
+# 4. Click "Deactivate" or "Delete"
+# ==================================================

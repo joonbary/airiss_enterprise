@@ -1,0 +1,20 @@
+# AIRISS Emergency Git Commands
+# Copy and paste these commands one by one in Command Prompt or PowerShell
+
+# 1. Navigate to project directory
+cd "C:\Users\apro\OneDrive\Desktop\AIRISS\airiss_v4"
+
+# 2. Check current status
+git status
+
+# 3. Add all changes
+git add .
+
+# 4. Commit changes
+git commit -m "Emergency CI/CD Fix - Simplified pipeline"
+
+# 5. Push to GitHub
+git push origin main
+
+# 6. Check result
+echo "Done! Check https://github.com/joonbary/airiss_enterprise/actions"

@@ -1,0 +1,18 @@
+option_settings:
+  aws:elasticbeanstalk:application:environment:
+    PYTHONPATH: "/var/app/current"
+    ENVIRONMENT: "production"
+    DEBUG: "false"
+    PORT: "8000"
+  aws:autoscaling:launchconfiguration:
+    InstanceType: t3.medium
+    IamInstanceProfile: aws-elasticbeanstalk-ec2-role
+  aws:autoscaling:asg:
+    MinSize: 1
+    MaxSize: 1
+  aws:elasticbeanstalk:healthreporting:system:
+    SystemType: enhanced
+  aws:elasticbeanstalk:application:
+    Application Healthcheck URL: /health
+  aws:elasticbeanstalk:command:
+    Timeout: 300

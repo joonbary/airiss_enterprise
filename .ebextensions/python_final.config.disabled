@@ -1,0 +1,55 @@
+option_settings:
+  aws:elasticbeanstalk:application:environment:
+    PYTHONPATH: "/var/app/current"
+    ENVIRONMENT: "production"
+    DEBUG: "false"
+  aws:autoscaling:launchconfiguration:
+    InstanceType: t3.micro
+    IamInstanceProfile: aws-elasticbeanstalk-ec2-role
+  aws:autoscaling:asg:
+    MinSize: 1
+    MaxSize: 2
+  aws:elasticbeanstalk:healthreporting:system:
+    SystemType: enhanced
+    HealthCheckSuccessThreshold: Ok
+    HealthCheckGracePeriod: 300
+  aws:elasticbeanstalk:application:
+    Application Healthcheck URL: /health
+  aws:elasticbeanstalk:cloudwatch:logs:
+    StreamLogs: true
+    DeleteOnTerminate: false
+    RetentionInDays: 7
+  aws:elasticbeanstalk:command:
+    Timeout: 600
+    DeploymentPolicy: RollingWithAdditionalBatch
+  aws:elasticbeanstalk:environment:process:default:
+    HealthCheckPath: /health
+    HealthCheckTimeout: 15
+    HealthyThresholdCount: 3
+    Interval: 30
+    MatcherHTTPCode: 200
+    Port: 80
+    Protocol: HTTP
+    StickinessEnabled: false
+    UnhealthyThresholdCount: 5
+
+container_commands:
+  01_create_logs_directory:
+    command: "mkdir -p /var/log/app && chmod 755 /var/log/app"
+    leader_only: true
+  02_ensure_temp_directory:
+    command: "mkdir -p /tmp/airiss && chmod 755 /tmp/airiss"
+    leader_only: true
+
+files:
+  "/opt/elasticbeanstalk/hooks/appdeploy/post/99_restart_delayed.sh":
+    mode: "000755"
+    owner: root
+    group: root
+    content: |
+      #!/bin/bash
+      # Allow time for FastAPI application to fully start before health checks
+      sleep 45
+      echo "AIRISS v4 FastAPI startup grace period completed"
+      # Check if application is responding
+      curl -f http://localhost/ > /dev/null 2>&1 || echo "Warning: Application may not be responding yet"
