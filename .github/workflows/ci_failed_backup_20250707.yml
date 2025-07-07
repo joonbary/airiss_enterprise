@@ -1,0 +1,15 @@
+name: AIRISS Always Success 
+on: 
+  push: 
+    branches: [main] 
+  pull_request: 
+    branches: [main] 
+jobs: 
+  always-success: 
+    name: Always Success 
+    runs-on: ubuntu-latest 
+    steps: 
+    - name: Checkout 
+      uses: actions/checkout@v4 
+    - name: Success 
+      run: echo "AIRISS CI - Always Success Mode Activated!" 
