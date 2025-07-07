@@ -1,0 +1,1 @@
+web: gunicorn application:application --workers=2 --worker-class=uvicorn.workers.UvicornWorker --bind=0.0.0.0:$PORT --timeout=300 --keep-alive=5 --max-requests=500 --max-requests-jitter=50 --preload --access-logfile=- --error-logfile=- --log-level=info

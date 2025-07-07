@@ -1,0 +1,19 @@
+option_settings:
+  aws:elasticbeanstalk:container:python:
+    WSGIPath: application:application
+  aws:elasticbeanstalk:application:environment:
+    PYTHONPATH: "/var/app/current:$PYTHONPATH"
+    ENVIRONMENT: "production"
+    DEBUG: "false"
+  aws:autoscaling:launchconfiguration:
+    InstanceType: t3.micro
+    IamInstanceProfile: aws-elasticbeanstalk-ec2-role
+  aws:autoscaling:asg:
+    MinSize: 1
+    MaxSize: 3
+  aws:elasticbeanstalk:healthreporting:system:
+    SystemType: enhanced
+  aws:elasticbeanstalk:cloudwatch:logs:
+    StreamLogs: true
+    DeleteOnTerminate: false
+    RetentionInDays: 7

@@ -1,0 +1,3 @@
+# AIRISS AWS 배포용 Procfile
+# 수정된 Phase 2 application 사용
+web: python application_phase2_preparation.py
