@@ -491,3 +491,8 @@ big_data/
 # ================================
 # Add your project-specific ignores here
 /specific_ignore_pattern
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

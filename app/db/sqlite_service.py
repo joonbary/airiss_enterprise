@@ -281,34 +281,34 @@ class SQLiteService:
             return None
 
     async def update_analysis_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
-        """분석 작업 업데이트 (Analysis API 호환)"""
+        """분석 작업 업데이트 (Analysis API 호환) - job_data 병합 보장"""
         try:
-            # 기존 작업 정보 조회
-            existing_job = await self.get_analysis_job(job_id)
-            if not existing_job:
-                logger.warning(f"업데이트할 작업을 찾을 수 없음: {job_id}")
-                return False
-            
-            # 업데이트된 데이터 병합
-            existing_job.update(updates)
-            existing_job['updated_at'] = datetime.now().isoformat()
-            
+            # 기존 job_data만 불러오기
+            async with aiosqlite.connect(self.db_path) as db:
+                async with db.execute("SELECT job_data FROM jobs WHERE id = ?", (job_id,)) as cursor:
+                    row = await cursor.fetchone()
+                    job_data = json.loads(row[0]) if row and row[0] else {}
+
+            # job_data에 업데이트 병합
+            job_data.update(updates)
+            job_data['updated_at'] = datetime.now().isoformat()
+            # 상태 필드는 별도 관리
+            status = job_data.get('status', updates.get('status', 'completed'))
+
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute("""
                     UPDATE jobs 
                     SET status = ?, updated_at = ?, job_data = ?
                     WHERE id = ?
                 """, (
-                    existing_job['status'],
-                    existing_job['updated_at'],
-                    json.dumps(existing_job),
+                    status,
+                    job_data['updated_at'],
+                    json.dumps(job_data),
                     job_id
                 ))
                 await db.commit()
-            
             logger.debug(f"✅ 분석 작업 업데이트 완료: {job_id}")
             return True
-            
         except Exception as e:
             logger.error(f"❌ 분석 작업 업데이트 오류: {e}")
             return False
@@ -341,7 +341,9 @@ class SQLiteService:
                             'processed_records': job_data.get('processed_records', 0),
                             'total_records': job_data.get('total_records', 0),
                             'analysis_mode': job_data.get('analysis_mode', 'hybrid'),
-                            'end_time': job_data.get('end_time', '')
+                            'end_time': job_data.get('end_time', ''),
+                            'average_score': job_data.get('average_score', 0),
+                            'enable_ai_feedback': job_data.get('enable_ai_feedback', False)
                         })
                     
                     return jobs
@@ -442,7 +444,8 @@ class SQLiteService:
                             'filename': row[5],
                             'total_records': job_data.get('total_records', 0),
                             'processed_records': job_data.get('processed', 0),
-                            'analysis_mode': job_data.get('analysis_mode', 'hybrid')
+                            'analysis_mode': job_data.get('analysis_mode', 'hybrid'),
+                            'enable_ai_feedback': job_data.get('enable_ai_feedback', False)
                         })
                     
                     return jobs

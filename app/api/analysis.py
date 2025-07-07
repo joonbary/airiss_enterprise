@@ -1247,6 +1247,7 @@ async def get_completed_jobs():
                     "job_id": job.get("job_id", ""),
                     "filename": file_data["filename"] if file_data else "Unknown",
                     "processed": job.get("processed_records", 0),
+                    "average_score": job.get("average_score", 0),
                     "created_at": job.get("created_at", ""),
                     "status": job.get("status", "unknown"),
                     "analysis_mode": job.get("analysis_mode", "hybrid"),

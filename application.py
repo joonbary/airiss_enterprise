@@ -1,27 +1,41 @@
-# application.py - AWS Elastic Beanstalk 진입점
-"""
-AIRISS v4.1 Enhanced - AWS Elastic Beanstalk 배포용 진입점
-"""
-
 import os
-import sys
+import logging
+from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 
-# 현재 디렉토리를 Python 경로에 추가
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)
+# 로깅 설정
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-from app.main import app
+# FastAPI 앱 생성
+app = FastAPI(title="AIRISS Deploy Test", version="1.0.0")
 
-# Elastic Beanstalk에서는 'application' 변수명이 필요
+@app.get("/")
+async def root():
+    logger.info("Root endpoint accessed")
+    return {"message": "AIRISS v4.0 Deploy Success", "status": "running"}
+
+@app.get("/health")
+async def health():
+    logger.info("Health check accessed")
+    return PlainTextResponse("OK", status_code=200)
+
+@app.get("/status")
+async def status():
+    logger.info("Status endpoint accessed")
+    return {
+        "status": "healthy",
+        "environment": os.environ.get("ENVIRONMENT", "production"),
+        "version": "1.0.0",
+        "port": os.environ.get("PORT", "8000")
+    }
+
+# AWS 호환성
 application = app
 
+# 개발 서버 실행
 if __name__ == "__main__":
     import uvicorn
-    
-    # 개발 환경에서 직접 실행할 때
-    uvicorn.run(
-        application, 
-        host="0.0.0.0", 
-        port=int(os.getenv("PORT", 8000)),
-        log_level="info"
-    )
+    port = int(os.environ.get("PORT", 8000))
+    logger.info(f"Starting server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
