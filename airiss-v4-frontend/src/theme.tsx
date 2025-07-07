@@ -24,47 +24,58 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"OKFont", "Noto Sans KR", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Noto Sans KR", "Inter", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
       fontSize: '2.5rem',
       fontWeight: 700,  // Bold
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     h2: {
       fontSize: '2rem',
       fontWeight: 700,  // Bold
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     h3: {
       fontSize: '1.75rem',
       fontWeight: 700,  // Bold
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     h4: {
       fontSize: '1.5rem',
-      fontWeight: 500,  // Medium
+      fontWeight: 600,  // Semibold
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     h5: {
       fontSize: '1.25rem',
-      fontWeight: 500,  // Medium
+      fontWeight: 600,  // Semibold
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     h6: {
       fontSize: '1rem',
       fontWeight: 500,  // Medium
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     body1: {
-      fontWeight: 300,  // Light
+      fontWeight: 400,  // Normal
+      fontFamily: '"Noto Sans KR", "Inter", sans-serif',
     },
     body2: {
-      fontWeight: 300,  // Light
+      fontWeight: 400,  // Normal
+      fontFamily: '"Noto Sans KR", "Inter", sans-serif',
     },
     button: {
       fontWeight: 500,  // Medium
       textTransform: 'none',
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
     caption: {
-      fontWeight: 300,  // Light
+      fontWeight: 400,  // Normal
+      fontFamily: '"Noto Sans KR", "Inter", sans-serif',
     },
     overline: {
       fontWeight: 500,  // Medium
       textTransform: 'none',
+      fontFamily: '"Inter", "Noto Sans KR", sans-serif',
     },
   },
   shape: {
@@ -76,7 +87,7 @@ const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 500,  // Medium
-          fontFamily: 'OKFont, sans-serif',
+          fontFamily: '"Inter", "Noto Sans KR", sans-serif',
         },
       },
     },
@@ -84,6 +95,22 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          fontFamily: '"Noto Sans KR", "Inter", sans-serif',
+        },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          '& .MuiInputBase-root': {
+            fontFamily: '"Noto Sans KR", "Inter", sans-serif',
+          },
         },
       },
     },
